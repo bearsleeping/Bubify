@@ -24,7 +24,7 @@
 body { background-color: var(--bg-color); color: var(--text-primary); max-width:400px; margin:0 auto; height:100vh; display:flex; flex-direction:column; overflow:hidden; position:relative; transition: transform 0.3s ease-in-out; }
 .header { padding:15px; text-align:center; font-size:18px; font-weight:600; letter-spacing:-0.5px; }
 .now-playing { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 30px; transition: transform 0.3s ease-in-out; }
-.album-cover { width:280px; height:280px; border-radius:50%; box-shadow:0 4px 30px rgba(0,0,0,0.5); position:relative; margin-bottom:30px; background:#1a1a1a; display:flex; align-items:center; justify-content:center; background-image: repeating-radial-gradient(circle at center, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 4px); }
+.album-cover { width:280px; height:280px; border-radius:50%; box-shadow:0 4px 30px rgba(0,0,0,0.5); position:relative; margin-bottom:30px; background:#1a1a1a; display:flex; align-items:center; justify-content:center; background-image: repeating-radial-gradient(circle at center, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 4px); cursor: grab; }
 .album-cover::before { content:''; position:absolute; width:20px; height:20px; background:var(--bg-color); border-radius:50%; z-index:2; border:3px solid #333; }
 .album-cover img { width:130px; height:130px; object-fit:cover; border-radius:50%; z-index:1; }
 .song-info { text-align:center; margin-bottom:30px; width:100%; }
@@ -59,8 +59,6 @@ body { background-color: var(--bg-color); color: var(--text-primary); max-width:
 .song-item-title { font-size:15px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .song-item-artist { font-size:13px; color:var(--text-secondary); }
 .song-item-duration { font-size:13px; color:var(--text-secondary); margin-left:15px; }
-@keyframes rotateAlbum { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
-.playing .album-cover { animation:rotateAlbum 15s linear infinite; }
 .song-list::-webkit-scrollbar { width:5px; }
 .song-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius:10px; }
 .song-list::-webkit-scrollbar-thumb { background:var(--text-secondary); border-radius:10px; }
@@ -74,6 +72,9 @@ body.queue-open .player-footer {
 }
 body.queue-open .now-playing {
     transform: translateY(-450px);
+}
+body.scrubbing {
+    cursor: grabbing;
 }
 </style>
 </head>
@@ -132,11 +133,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const songListEl = document.getElementById('song-list');
     const queueBtn = document.querySelector('.queue-btn');
     const body = document.body;
+    const albumCover = document.querySelector('.album-cover');
 
     let isPlaying = false;
     let currentSongIndex = 0;
     let songs = [];
     const audio = new Audio();
+    let currentRotation = 0;
+    let animationFrameId = null;
 
     function formatTime(seconds) {
         const minutes = Math.floor(seconds / 60);
@@ -210,6 +214,14 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
         document.querySelector(`.song-item:nth-child(${index + 1})`)?.classList.add('active');
 
+        // Zresetuj i potencjalnie rozpocznij animację obrotu dla nowego utworu
+        cancelAnimationFrame(animationFrameId);
+        currentRotation = 0;
+        albumCover.style.transform = 'rotate(0deg)';
+        if (isPlaying) {
+            animationFrameId = requestAnimationFrame(rotateCover);
+        }
+
         // Aktualizacja metadanych dla Media Session API - Chodzi o okładkę na panelu powiadomień
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
@@ -232,6 +244,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if(!audio.src) return;
         isPlaying = true;
         body.classList.add('playing'); // Ta klasa kontroluje teraz widoczność ikony
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = requestAnimationFrame(rotateCover);
         audio.play();
         if ('mediaSession' in navigator) {
             navigator.mediaSession.playbackState = "playing";
@@ -241,6 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function pauseSong() {
         isPlaying = false;
         body.classList.remove('playing');
+        cancelAnimationFrame(animationFrameId);
         audio.pause();
         if ('mediaSession' in navigator) {
             navigator.mediaSession.playbackState = "paused";
@@ -317,6 +332,85 @@ document.addEventListener('DOMContentLoaded', function() {
         queueBtn.classList.toggle('active');
     }
 
+    function rotateCover() {
+        if (!isPlaying) return;
+        currentRotation += 0.1; // Dostosuj prędkość obrotu
+        albumCover.style.transform = `rotate(${currentRotation}deg)`;
+        animationFrameId = requestAnimationFrame(rotateCover);
+    }
+
+    // --- Funkcjonalność przewijania (skreczowania) na desktop i mobile ---
+    let isScrubbing = false;
+    let wasPlayingBeforeScrub = false;
+    let albumCoverCenterX, albumCoverCenterY;
+    let lastAngle = 0;
+
+    function handleScrubStart(e) {
+        if (!audio.duration) return;
+        e.preventDefault(); // Zapobiega domyślnym akcjom, np. zaznaczaniu tekstu lub przewijaniu strony na mobile
+
+        isScrubbing = true;
+        wasPlayingBeforeScrub = isPlaying;
+        if (wasPlayingBeforeScrub) {
+            pauseSong();
+        }
+
+        // Oblicz środek okładki
+        const rect = albumCover.getBoundingClientRect();
+        albumCoverCenterX = rect.left + rect.width / 2;
+        albumCoverCenterY = rect.top + rect.height / 2;
+
+        // Pobierz pozycję wskaźnika (mysz lub dotyk)
+        const pointerX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        const pointerY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
+        // Ustaw kąt początkowy do obliczania różnicy w ruchu
+        lastAngle = Math.atan2(pointerY - albumCoverCenterY, pointerX - albumCoverCenterX);
+
+        body.classList.add('scrubbing');
+        progress.style.transition = 'none'; // Wyłącz płynną animację paska postępu dla natychmiastowej reakcji
+    }
+
+    function handleScrubMove(e) {
+        if (!isScrubbing) return;
+        e.preventDefault();
+
+        const pointerX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        const pointerY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+        const currentAngle = Math.atan2(pointerY - albumCoverCenterY, pointerX - albumCoverCenterX);
+        let deltaAngle = currentAngle - lastAngle;
+
+        // Poprawka na "przeskakiwanie" kąta z +180 na -180 stopni i odwrotnie
+        if (deltaAngle > Math.PI) deltaAngle -= 2 * Math.PI;
+        if (deltaAngle < -Math.PI) deltaAngle += 2 * Math.PI;
+
+        const deltaAngleDeg = deltaAngle * (180 / Math.PI);
+
+        // Zaktualizuj obrót wizualny, dodając zmianę
+        currentRotation += deltaAngleDeg;
+        albumCover.style.transform = `rotate(${currentRotation}deg)`;
+
+        // Zaktualizuj czas utworu na podstawie zmiany kąta
+        const timePerDegree = 15 / 360; // Czułość: 15 sekund utworu na pełny obrót (360 stopni)
+        const timeChange = deltaAngleDeg * timePerDegree;
+        let newTime = audio.currentTime + timeChange;
+        if (newTime < 0) newTime = 0;
+        if (newTime > audio.duration) newTime = audio.duration;
+        audio.currentTime = newTime;
+
+        // Zapisz aktualny kąt na potrzeby następnego ruchu
+        lastAngle = currentAngle;
+    }
+
+    function handleScrubEnd() {
+        if (!isScrubbing) return;
+        isScrubbing = false;
+        body.classList.remove('scrubbing');
+        progress.style.transition = 'width 0.1s linear'; // Włącz ponownie animację paska
+        if (wasPlayingBeforeScrub) playSong();
+    }
+
     audio.addEventListener('timeupdate', () => {
         if(!audio.duration) return;
         const progressPercent = (audio.currentTime/audio.duration)*100;
@@ -349,6 +443,17 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.prev-btn').addEventListener('click', prevSong);
     document.querySelector('.next-btn').addEventListener('click', nextSong);
     queueBtn.addEventListener('click', toggleQueue);
+
+    // Nasłuchiwanie na zdarzenia myszy i dotyku dla okładki
+    albumCover.addEventListener('mousedown', handleScrubStart);
+    albumCover.addEventListener('touchstart', handleScrubStart, { passive: false });
+
+    // Nasłuchiwanie na całym dokumencie, aby przeciąganie działało nawet po wyjechaniu kursorem/palcem poza okładkę
+    document.addEventListener('mousemove', handleScrubMove);
+    document.addEventListener('touchmove', handleScrubMove, { passive: false });
+
+    document.addEventListener('mouseup', handleScrubEnd);
+    document.addEventListener('touchend', handleScrubEnd);
 
     // Integracja z Media Session API (sterowanie z belki systemowej / ekranu blokady)
     if ('mediaSession' in navigator) {
