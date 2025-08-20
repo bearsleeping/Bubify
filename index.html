@@ -77,7 +77,7 @@ body.queue-open .now-playing {
 <div class="header"></div>
 <div class="now-playing">
 <div class="album-cover">
-<img src="https://placehold.co/130x130" alt="Okładka albumu" />
+<img src="https://placehold.co/130x130/2c2c2e/ffffff?text=?" alt="Okładka albumu" />
 </div>
 <div class="song-info">
 <div class="song-title">Ładowanie...</div>
@@ -137,17 +137,25 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(files => {
           songs = files
               .filter(f => f.name.endsWith('.mp3'))
-              .map(f => ({
-                  title: f.name.replace('.mp3',''),
-                  artist: 'Nieznany artysta',
-                  duration: '0:00',
-                  cover: 'https://github.com/bearsleeping/Muzyka/blob/main/1.jpg?raw=true',
-                  audio: f.download_url
-              }));
+              .map(f => {
+                  const name = f.name.replace(/\.mp3$/, '');
+                  const parts = name.split(' - ');
+                  const artist = parts.length > 1 ? parts[0].trim() : 'Nieznany artysta';
+                  const title = parts.length > 1 ? parts[1].trim() : name;
+                  
+                  return {
+                      title: title,
+                      artist: artist,
+                      duration: '0:00',
+                      cover: 'https://placehold.co/130x130/2c2c2e/ffffff?text=?', // Placeholder
+                      audio: f.download_url
+                  };
+              });
           populatePlaylist();
           loadSong(0);
+          fetchAlbumCovers(); // Pobierz okładki w tle
       })
-      .catch(err => console.error(err));
+      .catch(err => console.error("Błąd podczas pobierania listy utworów:", err));
 
     function populatePlaylist() {
         songListEl.innerHTML = '';
@@ -215,6 +223,33 @@ document.addEventListener('DOMContentLoaded', function() {
         currentSongIndex = (currentSongIndex-1 + songs.length)%songs.length;
         loadSong(currentSongIndex);
         if(isPlaying) playSong();
+    }
+
+    function fetchAlbumCovers() {
+        songs.forEach((song, index) => {
+            if (song.artist === 'Nieznany artysta') return;
+
+            const searchTerm = encodeURIComponent(`${song.artist} ${song.title}`);
+            const url = `https://itunes.apple.com/search?term=${searchTerm}&entity=song&limit=1`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.results && data.results.length > 0) {
+                        const coverUrl = data.results[0].artworkUrl100.replace('100x100', '600x600');
+                        songs[index].cover = coverUrl;
+
+                        if (index === currentSongIndex) {
+                            document.querySelector('.album-cover img').src = coverUrl;
+                        }
+                        const songItem = songListEl.querySelector(`.song-item:nth-child(${index + 1})`);
+                        if (songItem) {
+                            songItem.querySelector('.song-thumbnail img').src = coverUrl;
+                        }
+                    }
+                })
+                .catch(err => console.warn(`Nie udało się pobrać okładki dla: ${song.title}`, err));
+        });
     }
 
     function toggleQueue() {
