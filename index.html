@@ -31,8 +31,39 @@ body { background-color: var(--bg-color); color: var(--text-primary); max-width:
 .song-title { font-size:22px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .song-artist { font-size:16px; color:var(--text-secondary); }
 .progress-container { width:100%; margin-bottom:15px; }
-.progress-bar { width:100%; height:3px; background-color:var(--control-bg); border-radius:3px; margin-bottom:5px; cursor:pointer; }
-.progress { height:100%; background-color:var(--primary); border-radius:3px; width:0%; transition: width 0.1s linear; }
+.progress-bar {
+    width: 100%;
+    height: 5px; /* Zwiększony obszar dotykowy */
+    background-color: transparent;
+    margin-bottom: 5px;
+    cursor: pointer;
+    position: relative; /* Potrzebne dla pseudo-elementu i paska postępu */
+}
+/* Rysowanie tła (ścieżki) jako pseudo-element, aby nie kolidowało z obszarem dotykowym */
+.progress-bar::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    height: 3px;
+    background-color: var(--control-bg);
+    border-radius: 3px;
+    pointer-events: none; /* Ignoruj zdarzenia myszy na tym elemencie */
+}
+.progress {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 3px; /* Stała wysokość wizualnego paska */
+    background-color: var(--primary);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.1s linear;
+    pointer-events: none; /* Ignoruj zdarzenia myszy na tym elemencie */
+}
 .time { display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); }
 .volume-container {
     width: 100%;
@@ -56,39 +87,36 @@ body { background-color: var(--bg-color); color: var(--text-primary); max-width:
 }
 .volume-slider::-webkit-slider-runnable-track {
     width: 100%;
-    height: 4px;
+    height: 3px; /* Bardzo cienka ścieżka w stylu iOS */
     cursor: pointer;
     background: linear-gradient(to right, var(--text-primary) var(--volume-progress, 100%), var(--control-bg) var(--volume-progress, 100%));
-    border-radius: 4px;
+    border-radius: 2px;
 }
 .volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    height: 16px;
     width: 0; /* Ukrycie kciuka */
-    border-radius: 50%;
+    height: 0;
     background: transparent;
     cursor: pointer;
-    margin-top: -6px; /* Wyśrodkowanie kciuka na ścieżce */
 }
 
 /* Style dla Firefox */
 .volume-slider::-moz-range-track {
     width: 100%;
-    height: 4px;
+    height: 2px;
     cursor: pointer;
     background: var(--control-bg);
-    border-radius: 4px;
+    border-radius: 2px;
 }
 .volume-slider::-moz-range-progress {
     background-color: var(--text-primary);
-    height: 4px;
-    border-radius: 4px;
+    height: 2px;
+    border-radius: 2px;
 }
 .volume-slider::-moz-range-thumb {
-    height: 16px;
     width: 0; /* Ukrycie kciuka */
-    border-radius: 50%;
+    height: 0;
     background: transparent;
     cursor: pointer;
     border: none;
@@ -106,7 +134,7 @@ body { background-color: var(--bg-color); color: var(--text-primary); max-width:
 .playing .play-btn .icon-pause {
     display: block !important; /* Użyj important, aby nadpisać styl inline */
 }
-.player-footer { background-color:var(--card-bg); border-top-left-radius:15px; border-top-right-radius:15px; padding:0 20px 15px; box-shadow:0 -5px 15px rgba(0,0,0,0.3); position:absolute; bottom:0; left:0; right:0; transform: translateY(100%); transition: transform 0.3s ease-in-out; }
+.player-footer { background-color:var(--card-bg); border-top-left-radius:15px; border-top-right-radius:15px; padding:0 20px 15px; box-shadow:0 -5px 15px rgba(0,0,0,0.3); position:absolute; bottom:0; left:0; right:0; transform: translateY(calc(100% + 20px)); transition: transform 0.3s ease-in-out; }
 .song-list { list-style:none; max-height:450px; overflow-y:auto; padding-top: 15px; }
 .song-item { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.1); cursor:pointer; transition:background-color 0.2s; }
 .song-item:hover { background-color: rgba(255,255,255,0.05); }
@@ -125,8 +153,6 @@ body { background-color: var(--bg-color); color: var(--text-primary); max-width:
 .song-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius:10px; }
 .song-list::-webkit-scrollbar-thumb { background:var(--text-secondary); border-radius:10px; }
 @media (max-height:700px) { .album-cover { width:220px; height:220px; } }
-.theme-toggle { position:absolute; top:15px; right:15px; width:30px; height:30px; border-radius:50%; background-color:var(--card-bg); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:10; }
-.theme-toggle svg { width:16px; height:16px; fill:var(--text-primary); }
 
 /* Nowe style do animacji wysuwania kolejki */
 body.queue-open .player-footer {
@@ -141,9 +167,6 @@ body.scrubbing {
 </style>
 </head>
 <body>
-<div class="theme-toggle" id="theme-toggle">
-<svg viewBox="0 0 24 24"><path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1-8.313-12.454z"/></svg>
-</div>
 <div class="header"></div>
 <div class="now-playing">
 <div class="album-cover">
@@ -201,6 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const body = document.body;
     const volumeSlider = document.getElementById('volume-slider');
     const albumCover = document.querySelector('.album-cover');
+    const progressBar = document.querySelector('.progress-bar');
 
     let isPlaying = false;
     let currentSongIndex = 0;
@@ -483,6 +507,57 @@ document.addEventListener('DOMContentLoaded', function() {
         if (wasPlayingBeforeScrub) playSong();
     }
 
+    // --- Funkcjonalność przewijania (skreczowania) na PASKU POSTĘPU ---
+    let isProgressScrubbing = false;
+
+    function setSongPosition(e) {
+        if (!audio.duration) return;
+        const rect = progressBar.getBoundingClientRect();
+        // Dla zdarzeń dotykowych użyj pierwszego punktu dotyku
+        const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+        const offsetX = clientX - rect.left;
+        const width = rect.width;
+        let newTime = (offsetX / width) * audio.duration;
+
+        // Ogranicz wartość do zakresu od 0 do czasu trwania utworu
+        if (newTime < 0) newTime = 0;
+        if (newTime > audio.duration) newTime = audio.duration;
+
+        audio.currentTime = newTime;
+    }
+
+    function handleProgressScrubStart(e) {
+        e.preventDefault();
+        isProgressScrubbing = true;
+        progress.style.transition = 'none'; // Wyłącz płynną animację dla natychmiastowej reakcji
+        body.classList.add('scrubbing');
+        setSongPosition(e); // Ustaw pozycję od razu po kliknięciu
+    }
+
+    function handleProgressScrubMove(e) {
+        if (!isProgressScrubbing) return;
+        e.preventDefault();
+        setSongPosition(e);
+    }
+
+    function handleProgressScrubEnd() {
+        if (!isProgressScrubbing) return;
+        isProgressScrubbing = false;
+        progress.style.transition = 'width 0.1s linear'; // Włącz ponownie animację paska
+        body.classList.remove('scrubbing');
+    }
+
+    // Dodanie nasłuchiwaczy dla paska postępu (zastępuje stary 'click')
+    progressBar.addEventListener('mousedown', handleProgressScrubStart);
+    progressBar.addEventListener('touchstart', handleProgressScrubStart, { passive: false });
+
+    // Nasłuchiwacze na całym dokumencie, aby przeciąganie działało płynnie
+    document.addEventListener('mousemove', handleProgressScrubMove);
+    document.addEventListener('touchmove', handleProgressScrubMove, { passive: false });
+
+    document.addEventListener('mouseup', handleProgressScrubEnd);
+    document.addEventListener('touchend', handleProgressScrubEnd);
+
     audio.addEventListener('timeupdate', () => {
         if(!audio.duration) return;
         const progressPercent = (audio.currentTime/audio.duration)*100;
@@ -502,12 +577,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (songItem) songItem.querySelector('.song-item-duration').textContent = formattedDuration;
             }
         }
-    });
-
-    document.querySelector('.progress-bar').addEventListener('click', function(e){
-        if(!audio.duration) return;
-        const width = this.clientWidth;
-        audio.currentTime = (e.offsetX/width)*audio.duration;
     });
 
     audio.addEventListener('ended', nextSong);
