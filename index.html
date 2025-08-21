@@ -193,6 +193,11 @@ body.is-ios .volume-container {
 .album-cover.type-o-negative-glow {
     box-shadow: 0 4px 35px rgba(0,0,0,0.6), 0 0 80px 15px rgba(80, 220, 0, 0.5);
 }
+
+/* Efekt specjalny dla Rammstein */
+.album-cover.rammstein-glow {
+    box-shadow: 0 4px 35px rgba(0,0,0,0.6), 0 0 80px 15px rgba(255, 0, 0, 0.5);
+}
 </style>
 </head>
 <body>
@@ -349,10 +354,13 @@ document.addEventListener('DOMContentLoaded', function() {
         audio.src = song.audio;
 
         // Sprawdzenie artysty i dodanie/usunięcie klasy dla cienia
-        if (song.artist.toLowerCase().includes('type o negative')) {
+        albumCover.classList.remove('type-o-negative-glow', 'rammstein-glow');
+        
+        const artistLower = song.artist.toLowerCase();
+        if (artistLower.includes('type o negative')) {
             albumCover.classList.add('type-o-negative-glow');
-        } else {
-            albumCover.classList.remove('type-o-negative-glow');
+        } else if (artistLower.includes('rammstein')) {
+            albumCover.classList.add('rammstein-glow');
         }
 
         document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
