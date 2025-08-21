@@ -49,20 +49,49 @@ body { background-color: var(--bg-color); color: var(--text-primary); max-width:
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 3px;
-    background: var(--control-bg);
-    border-radius: 3px;
+    height: 8px; /* Zwiększona wysokość dla łatwiejszej interakcji */
+    background: transparent; /* Tło jest teraz na ścieżce */
     outline: none;
     cursor: pointer;
+}
+.volume-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: linear-gradient(to right, var(--text-primary) var(--volume-progress, 100%), var(--control-bg) var(--volume-progress, 100%));
+    border-radius: 4px;
 }
 .volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 15px;
-    height: 15px;
-    background: var(--text-primary);
-    cursor: pointer;
+    height: 16px;
+    width: 0; /* Ukrycie kciuka */
     border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    margin-top: -6px; /* Wyśrodkowanie kciuka na ścieżce */
+}
+
+/* Style dla Firefox */
+.volume-slider::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    cursor: pointer;
+    background: var(--control-bg);
+    border-radius: 4px;
+}
+.volume-slider::-moz-range-progress {
+    background-color: var(--text-primary);
+    height: 4px;
+    border-radius: 4px;
+}
+.volume-slider::-moz-range-thumb {
+    height: 16px;
+    width: 0; /* Ukrycie kciuka */
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    border: none;
 }
 .controls { display:flex; justify-content:center; align-items:center; gap: 20px; margin-bottom:30px; }
 .control-btn { width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:50%; cursor:pointer; background-color: rgba(255,255,255,0.1); transition: background-color 0.2s; }
@@ -374,6 +403,11 @@ document.addEventListener('DOMContentLoaded', function() {
         animationFrameId = requestAnimationFrame(rotateCover);
     }
 
+    function updateVolumeSlider() {
+        const percentage = (volumeSlider.value - volumeSlider.min) / (volumeSlider.max - volumeSlider.min) * 100;
+        volumeSlider.style.setProperty('--volume-progress', `${percentage}%`);
+    }
+
     // --- Funkcjonalność przewijania (skreczowania) na desktop i mobile ---
     let isScrubbing = false;
     let wasPlayingBeforeScrub = false;
@@ -481,8 +515,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     volumeSlider.addEventListener('input', (e) => {
         audio.volume = e.target.value / 100;
+        updateVolumeSlider();
     });
     audio.volume = volumeSlider.value / 100;
+    updateVolumeSlider();
 
     // Nasłuchiwanie na zdarzenia myszy i dotyku dla okładki
     albumCover.addEventListener('mousedown', handleScrubStart);
