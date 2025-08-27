@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Bubfiy</title>
 
+<!-- Import czcionki z Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+
 <!-- Ustawienia dla aplikacji webowej na iOS (ukrycie paska przeglądarki) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -42,6 +47,12 @@ body {
     overflow:hidden; position:relative; transition: transform 0.3s ease-in-out, background-color 0.3s ease, color 0.3s ease;
 }
 .header { padding:15px 20px; display: flex; justify-content: space-between; align-items: center; font-size:18px; font-weight:600; letter-spacing:-0.5px; transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
+.header > span {
+    font-family: 'Pacifico', cursive;
+    font-size: 24px;
+    font-weight: 400; /* Czcionki ozdobne często wyglądają lepiej bez pogrubienia */
+    transform: translateY(2px); /* Delikatne dopasowanie pionowe */
+}
 .theme-switcher {
     cursor: pointer;
     color: var(--text-secondary);
