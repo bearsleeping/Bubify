@@ -1002,7 +1002,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
         // 3. Po załadowaniu obu, zaktualizuj UI
-        Promise.all([likedSongsPromise, playlistsPromise])
+        // Używamy Promise.allSettled, aby kontynuować nawet jeśli jedno z zapytań się nie powiedzie
+        // (np. błąd przy pobieraniu playlist nie powinien blokować wyświetlenia polubionych utworów)
+        Promise.allSettled([likedSongsPromise, playlistsPromise])
             .then(([likedSongs]) => {
                 // Połącz wszystkie unikalne utwory w jedną listę `allSongs`
                 const allSongsMap = new Map();
