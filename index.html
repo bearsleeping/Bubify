@@ -952,39 +952,87 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadFromSpotify(token) {
-        // Pobierz zapisane utwory użytkownika
-        fetch('https://api.spotify.com/v1/me/tracks?limit=50', {
+        const fetchOptions = {
             headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => {
-            if (res.status === 401) { // Token wygasł
-                window.location.hash = '';
-                loginSpotifyBtn.click();
-                return;
-            }
-            return res.json();
-        })
-        .then(data => {
-            if (!data || !data.items) {
-                console.error("Nie udało się pobrać utworów ze Spotify", data);
-                return;
-            }
-            allSongs = data.items.map(item => ({
-                title: item.track.name,
-                artist: item.track.artists.map(a => a.name).join(', '),
-                duration: formatTime(item.track.duration_ms / 1000),
-                duration_ms: item.track.duration_ms, // Dodajemy surową wartość ms
-                cover: item.track.album.images[0]?.url || 'https://placehold.co/100x100/2c2c2e/ffffff?text=?',
-                audio: item.track.uri, // Używamy URI jako identyfikatora
-                isSpotify: true
-            }));
+        };
 
-            // Na razie prosta playlista "Zapisane utwory"
-            playlists = { 'Zapisane utwory': allSongs.map(s => s.audio) };
-            setActivePlaylist('Zapisane utwory');
-            managePlaylistsBtn.style.display = 'none'; // Ukryj zarządzanie playlistami w trybie Spotify
-        })
-        .catch(err => console.error("Błąd podczas pobierania utworów ze Spotify:", err));
+        // 1. Pobierz polubione utwory
+        const likedSongsPromise = fetch('https://api.spotify.com/v1/me/tracks?limit=50', fetchOptions)
+            .then(res => res.json())
+            .then(data => {
+                if (!data || !data.items) {
+                    console.error("Nie udało się pobrać polubionych utworów.", data);
+                    return [];
+                }
+                const likedSongs = data.items.map(item => ({
+                    title: item.track.name,
+                    artist: item.track.artists.map(a => a.name).join(', '),
+                    duration: formatTime(item.track.duration_ms / 1000),
+                    duration_ms: item.track.duration_ms,
+                    cover: item.track.album.images[0]?.url || 'https://placehold.co/100x100/2c2c2e/ffffff?text=?',
+                    audio: item.track.uri,
+                    isSpotify: true
+                }));
+                playlists['Polubione utwory'] = likedSongs; // Zapisz całe obiekty, nie tylko URI
+                return likedSongs;
+            });
+
+        // 2. Pobierz playlisty użytkownika
+        const playlistsPromise = fetch('https://api.spotify.com/v1/me/playlists', fetchOptions)
+            .then(res => res.json())
+            .then(data => {
+                if (!data || !data.items) {
+                    console.error("Nie udało się pobrać playlist użytkownika.", data);
+                    return;
+                }
+                data.items.forEach(playlist => {
+                    // Zapisujemy obietnicę wczytania utworów dla każdej playlisty
+                    playlists[playlist.name] = fetch(playlist.tracks.href, fetchOptions)
+                        .then(res => res.json())
+                        .then(trackData => trackData.items.map(item => ({
+                            title: item.track.name,
+                            artist: item.track.artists.map(a => a.name).join(', '),
+                            duration: formatTime(item.track.duration_ms / 1000),
+                            duration_ms: item.track.duration_ms,
+                            cover: item.track.album.images[0]?.url || 'https://placehold.co/100x100/2c2c2e/ffffff?text=?',
+                            audio: item.track.uri,
+                            isSpotify: true
+                        })));
+                });
+            });
+
+        // 3. Po załadowaniu obu, zaktualizuj UI
+        Promise.all([likedSongsPromise, playlistsPromise])
+            .then(([likedSongs]) => {
+                // Połącz wszystkie unikalne utwory w jedną listę `allSongs`
+                const allSongsMap = new Map();
+                likedSongs.forEach(song => allSongsMap.set(song.audio, song));
+                // W przyszłości można dodać utwory z innych playlist do allSongsMap
+                allSongs = Array.from(allSongsMap.values());
+
+                // Ustaw "Polubione utwory" jako domyślną playlistę
+                setActivePlaylist('Polubione utwory');
+            })
+            .catch(err => {
+                console.error("Błąd podczas pobierania danych ze Spotify:", err);
+                // Obsługa wygaśnięcia tokenu
+                if (err.status === 401 || (err.message && err.message.includes('401'))) {
+                    window.location.hash = '';
+                    loginSpotifyBtn.click();
+                }
+            });
+    }
+
+    function fetchSpotifyPlaylistTracks(playlistName) {
+        const playlistData = playlists[playlistName];
+        if (Array.isArray(playlistData)) {
+            // Jeśli dane są już tablicą (np. dla "Polubione utwory"), zwróć je
+            return Promise.resolve(playlistData);
+        } else if (playlistData instanceof Promise) {
+            // Jeśli to obietnica, poczekaj na jej rozwiązanie
+            return playlistData;
+        }
+        return Promise.reject("Nie znaleziono playlisty");
     }
 
     function playSpotifyTrack(trackUri) {
@@ -1023,39 +1071,47 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         activePlaylistName = name;
-        
-        // Generuj tablicę `songs` dla aktywnej playlisty
-        const songUrls = playlists[activePlaylistName];
-        songs = songUrls.map(url => allSongs.find(s => s.audio === url)).filter(Boolean);
-
         playlistTitleEl.textContent = activePlaylistName;
-        populatePlaylist();
-        populatePlaylistManager();
+        
+        // Wyczyść listę piosenek i pokaż stan ładowania
+        songListEl.innerHTML = '<li>Ładowanie...</li>';
+        populatePlaylistManager(); // Zaktualizuj, która playlista jest aktywna
 
-        if (songs.length > 0) {
-            loadSong(0);
-        } else {
-            // Wyczyść interfejs, jeśli playlista jest pusta
-            document.querySelector('.song-title').textContent = 'Playlista jest pusta';
-            document.querySelector('.song-artist').textContent = '...';
-            document.querySelector('.album-cover img').src = 'https://placehold.co/100x100/2c2c2e/ffffff?text=?';
-            durationEl.textContent = '0:00';
-            currentTimeEl.textContent = '0:00';
-            progress.style.width = '0%';
-            audio.src = '';
-            if (isPlaying) pauseSong();
-        }
-        localStorage.setItem('bubify_lastActivePlaylist', name);
+        fetchSpotifyPlaylistTracks(name).then(playlistSongs => {
+            songs = playlistSongs;
+
+            populatePlaylist();
+
+            if (songs.length > 0) {
+                loadSong(0);
+                // Automatycznie odtwarzaj tylko przy pierwszym załadowaniu (Polubione utwory)
+                if (name === 'Polubione utwory') {
+                    playSong();
+                }
+            } else {
+                // Wyczyść interfejs, jeśli playlista jest pusta
+                document.querySelector('.song-title').textContent = 'Playlista jest pusta';
+                document.querySelector('.song-artist').textContent = '...';
+                document.querySelector('.album-cover img').src = 'https://placehold.co/100x100/2c2c2e/ffffff?text=?';
+                durationEl.textContent = '0:00';
+                currentTimeEl.textContent = '0:00';
+                progress.style.width = '0%';
+                if (spotifyPlayer) spotifyPlayer.pause();
+                if (isPlaying) pauseSong();
+            }
+        }).catch(err => {
+            console.error(`Nie udało się wczytać utworów dla playlisty "${name}":`, err);
+            songListEl.innerHTML = '<li>Błąd wczytywania playlisty.</li>';
+        });
     }
 
     function populatePlaylist() {
         songListEl.innerHTML = '';
-        const favoriteUrls = new Set(playlists['Ulubione']);
+        // W trybie Spotify, ulubione są już w swojej playliście, więc nie potrzebujemy `favoriteUrls`
 
         songs.forEach((song, index) => {
             const li = document.createElement('li');
             li.classList.add('song-item');
-            const isFavorite = favoriteUrls.has(song.audio);
 
             li.innerHTML = `
                 <div class="song-number">${index + 1}</div>
@@ -1066,10 +1122,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="song-item-duration">${song.duration}</div>
                 <div class="song-item-actions">
-                    <button class="favorite-btn ${isFavorite ? 'is-favorite' : ''}">
-                        <svg class="icon-heart-empty" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                        <svg class="icon-heart-filled" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                    </button>
+                    <!-- W trybie Spotify przycisk ulubionych można dodać w przyszłości -->
                 </div>
             `;
             li.querySelector('.song-item-info').addEventListener('click', () => {
@@ -1078,10 +1131,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 playSong();
                 body.classList.remove('queue-open'); // Dodatkowo zamyka kolejkę po wyborze utworu
                 queueBtn.classList.remove('active');
-            });
-            li.querySelector('.favorite-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleFavorite(song);
             });
             songListEl.appendChild(li);
         });
@@ -1135,6 +1184,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Aktualizacja metadanych dla Media Session API - Chodzi o okładkę na panelu powiadomień
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
+                title: item.track.name,
+                artist: item.track.artists.map(a => a.name).join(', '),
                 title: song.title,
                 artist: song.artist,
                 album: 'Bubify',
