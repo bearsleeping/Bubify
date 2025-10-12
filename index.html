@@ -785,6 +785,8 @@ document.addEventListener('DOMContentLoaded', function() {
             spotifyPlayer.addListener('ready', ({ device_id }) => {
                 console.log('Odtwarzacz Spotify jest gotowy z ID urządzenia', device_id);
                 spotifyDeviceId = device_id;
+                // Dopiero teraz, gdy odtwarzacz jest gotowy, wczytaj utwory
+                loadFromSpotify(spotifyAccessToken);
             });
 
             // Not Ready
@@ -941,8 +943,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             initializeSpotifyPlayer(accessToken);
             loginSpotifyBtn.style.display = 'none';
-            loadFromSpotify(accessToken);
-            managePlaylistsBtn.style.display = 'none';
 
             // Wyczyść parametry z adresu URL, aby nie były widoczne
             window.history.replaceState({}, document.title, "/Bubify/");
@@ -982,6 +982,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Na razie prosta playlista "Zapisane utwory"
             playlists = { 'Zapisane utwory': allSongs.map(s => s.audio) };
             setActivePlaylist('Zapisane utwory');
+            managePlaylistsBtn.style.display = 'none'; // Ukryj zarządzanie playlistami w trybie Spotify
         })
         .catch(err => console.error("Błąd podczas pobierania utworów ze Spotify:", err));
     }
