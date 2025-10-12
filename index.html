@@ -973,6 +973,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 title: item.track.name,
                 artist: item.track.artists.map(a => a.name).join(', '),
                 duration: formatTime(item.track.duration_ms / 1000),
+                duration_ms: item.track.duration_ms, // Dodajemy surową wartość ms
                 cover: item.track.album.images[0]?.url || 'https://placehold.co/100x100/2c2c2e/ffffff?text=?',
                 audio: item.track.uri, // Używamy URI jako identyfikatora
                 isSpotify: true
@@ -1006,6 +1007,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error("Nie udało się rozpocząć odtwarzania na Spotify.", res);
             }
         });
+    }
+
+    function updateSpotifyUI(state) {
+        const currentTrack = state.track_window.current_track;
+        document.querySelector('.song-title').textContent = currentTrack.name;
+        document.querySelector('.song-artist').textContent = currentTrack.artists.map(a => a.name).join(', ');
+        document.querySelector('.album-cover img').src = currentTrack.album.images[0].url;
     }
 
     function setActivePlaylist(name) {
@@ -1084,7 +1092,15 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('.song-title').textContent = song.title;
         document.querySelector('.song-artist').textContent = song.artist;
         document.querySelector('.album-cover img').src = song.cover;
-        durationEl.textContent = song.duration;
+        
+        // Dla Spotify, czas trwania jest ustawiany przez player_state_changed,
+        // ale ustawmy go też tutaj dla spójności przy pierwszym ładowaniu.
+        if (song.isSpotify) {
+            durationEl.textContent = formatTime(song.duration_ms / 1000);
+        } else {
+            durationEl.textContent = song.duration;
+        }
+
 
         if (song.isSpotify) {
             // Dla Spotify nie ustawiamy audio.src, bo odtwarzanie jest obsługiwane przez API
@@ -1371,11 +1387,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let isProgressScrubbing = false;
 
     function setSongPosition(e) {
-        if (!audio.duration) return;
+        const song = songs[currentSongIndex];
+        if (!song || (!audio.duration && !song.isSpotify)) return;
+
         if (songs[currentSongIndex]?.isSpotify && spotifyPlayer) {
             const rect = progressBar.getBoundingClientRect();
-            const newPosition = (e.clientX - rect.left) / rect.width;
-            spotifyPlayer.seek(newPosition * songs[currentSongIndex].duration_ms).then(() => console.log('Przewinięto utwór Spotify.'));
+            const newPosition = ((e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX) - rect.left) / rect.width;
+            spotifyPlayer.seek(newPosition * song.duration_ms).then(() => console.log('Przewinięto utwór Spotify.'));
         }
         const rect = progressBar.getBoundingClientRect();
         // Dla zdarzeń dotykowych użyj pierwszego punktu dotyku
@@ -1483,7 +1501,12 @@ document.addEventListener('DOMContentLoaded', function() {
     newPlaylistNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleConfirmCreatePlaylist(); });
 
     volumeSlider.addEventListener('input', (e) => {
-        audio.volume = e.target.value / 100;
+        const volume = e.target.value / 100;
+        if (songs[currentSongIndex]?.isSpotify && spotifyPlayer) {
+            spotifyPlayer.setVolume(volume).then(() => console.log(`Głośność Spotify ustawiona na ${volume}`));
+        } else {
+            audio.volume = volume;
+        }
         updateVolumeSlider();
     });
     audio.volume = volumeSlider.value / 100;
