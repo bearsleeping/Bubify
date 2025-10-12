@@ -5,37 +5,54 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Bubfiy</title>
 
-<!-- Import czcionki z Google Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
-
 <!-- Ustawienia dla aplikacji webowej na iOS (ukrycie paska przeglądarki) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bubify">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png"> <!-- Zastąp ścieżką do Twojej ikony (np. 180x180px) -->
 
+<!-- Import czcionki z Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+
+<!-- Spotify Web Playback SDK -->
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+
 <style>
 :root {
-    --bg-color: #1c1c1e;
-    --primary: #0a84ff;
-    --primary-hover: #0066cc;
+    --bg-color: #110f0f;
+    --primary: #0a58a3; /* Ciemniejszy, bardziej stonowany niebieski */
+    --primary-hover: #084680; /* Ciemniejszy niebieski dla hover */
     --text-primary: #ffffff;
     --text-secondary: #98989d;
     --control-bg: #3a3a3c;
     --card-bg: #2c2c2e;
+    /* Nowe zmienne dla przycisków i list */
+    --control-btn-bg: rgba(255, 255, 255, 0.08);
+    --control-btn-bg-hover: rgba(255, 255, 255, 0.16);
+    --control-btn-bg-active: rgba(255, 255, 255, 0.12);
+    --divider-color: rgba(255, 255, 255, 0.1);
+    --list-item-hover-bg: rgba(255, 255, 255, 0.05);
 }
 
 /* Gothic Vampire Theme */
 body.theme-vampire {
+    /* --- Tło w postaci obrazu --- */
+
     --bg-color: #180000;
-    --primary: #990000;
-    --primary-hover: #7a0000;
+    --primary: #6d0000; /* Ciemniejsza, głębsza czerwień */
+    --primary-hover: #5c0000; /* Ciemniejsza czerwień dla hover */
     --text-primary: #f5f5f5;
     --text-secondary: #a0a0a0;
     --control-bg: #333333;
     --card-bg: #1e1e1e;
+    /* Nowe zmienne dla przycisków i list */
+    --control-btn-bg: rgba(255, 255, 255, 0.08);
+    --control-btn-bg-hover: rgba(255, 255, 255, 0.16);
+    --control-btn-bg-active: rgba(255, 255, 255, 0.12);
+    --divider-color: rgba(255, 255, 255, 0.1);
+    --list-item-hover-bg: rgba(255, 255, 255, 0.05);
 }
 * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; /* Usunięcie podświetlenia przy dotyku na iOS */ }
 body {
@@ -44,9 +61,29 @@ body {
     height: 100vh; /* Fallback dla przeglądarek bez JS */
     height: calc(var(--vh, 1vh) * 100); /* Poprawka na problem 100vh na mobile */
     display:flex; flex-direction:column;
-    overflow:hidden; position:relative; transition: transform 0.3s ease-in-out, background-color 0.3s ease, color 0.3s ease;
+    overflow:hidden; position:relative; 
+    transition: background-color 0.4s ease, color 0.4s ease;
 }
-.header { padding:15px 20px; display: flex; justify-content: space-between; align-items: center; font-size:18px; font-weight:600; letter-spacing:-0.5px; transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
+/* Pseudo-element do płynnego przejścia tła obrazkowego */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url('images/vampire-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    opacity: 0;
+    filter: blur(0px); /* Dodajemy filtr rozmycia */
+    transition: opacity 0.4s ease, filter 0.4s ease; /* Dodajemy przejście dla filtra */
+    z-index: -1; /* Umieść za treścią */
+    pointer-events: none;
+}
+body.theme-vampire::after {
+    opacity: 1;
+    filter: blur(5px); /* Ustawiamy rozmycie dla motywu wampira */
+}
+.header { padding:15px 20px; display: flex; justify-content: space-between; align-items: center; font-size:18px; font-weight:600; letter-spacing:-0.5px; transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; position: relative; z-index: 2; }
 .header > span {
     font-family: 'Pacifico', cursive;
     font-size: 24px;
@@ -58,15 +95,27 @@ body {
     color: var(--text-secondary);
     transition: color 0.2s, transform 0.1s ease-out;
 }
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+#login-spotify-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.2s, transform 0.1s ease-out;
+}
 .theme-switcher:hover {
     color: var(--text-primary);
 }
 .theme-switcher:active {
     transform: scale(0.9);
 }
-.now-playing { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 30px; transition: transform 0.3s ease-in-out; }
+.now-playing { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 30px; transition: transform 0.3s ease-in-out; position: relative; z-index: 2; }
 .album-cover { width:280px; height:280px; border-radius:50%; box-shadow:0 4px 30px rgba(0,0,0,0.5); position:relative; margin-bottom:30px; background:#1a1a1a; display:flex; align-items:center; justify-content:center; background-image: repeating-radial-gradient(circle at center, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 4px); cursor: grab; transition: box-shadow 0.7s ease-in-out; }
-.album-cover::before { content:''; position:absolute; width:20px; height:20px; background:var(--bg-color); border-radius:50%; z-index:2; border:3px solid var(--control-bg); transition: background-color 0.3s ease, border-color 0.3s ease; }
+.album-cover::before { content:''; position:absolute; width:20px; height:20px; background:var(--bg-color); border-radius:50%; z-index:2; border:3px solid var(--control-bg); transition: background-color 0.4s ease, border-color 0.4s ease; }
 .album-cover img { width:100px; height:100px; object-fit:cover; border-radius:50%; z-index:1; }
 .song-info { text-align:center; margin-bottom:30px; width:100%; }
 .song-title { font-size:22px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -89,7 +138,7 @@ body {
     transform: translateY(-50%);
     width: 100%;
     height: 3px;
-    background-color: var(--control-bg); transition: background-color 0.3s ease;
+    background-color: var(--control-bg); transition: background-color 0.4s ease;
     border-radius: 3px;
     pointer-events: none; /* Ignoruj zdarzenia myszy na tym elemencie */
 }
@@ -101,11 +150,11 @@ body {
     height: 3px; /* Stała wysokość wizualnego paska */
     background-color: var(--primary);
     border-radius: 3px;
-    width: 0%; 
-    transition: width 0.1s linear, background-color 0.3s ease;
+    width: 0%;
+    transition: width 0.1s linear, background-color 0.4s ease;
     pointer-events: none; /* Ignoruj zdarzenia myszy na tym elemencie */
 }
-.time { display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); transition: color 0.3s ease; }
+.time { display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); transition: color 0.4s ease; }
 .volume-container {
     width: 100%;
     display: flex;
@@ -115,7 +164,7 @@ body {
 }
 .volume-container svg {
     fill: var(--text-secondary);
-    flex-shrink: 0; transition: fill 0.3s ease;
+    flex-shrink: 0; transition: fill 0.4s ease;
 }
 .volume-slider {
     -webkit-appearance: none;
@@ -141,8 +190,8 @@ body {
     background: var(--text-primary);
     border-radius: 50%;
     cursor: pointer;
-    margin-top: -6px; /* Wyśrodkowanie kciuka na ścieżce (3px - 15px) / 2 */ 
-    transition: transform 0.15s ease-in-out, background-color 0.3s ease;
+    margin-top: -6px; /* Wyśrodkowanie kciuka na ścieżce (3px - 15px) / 2 */
+    transition: transform 0.15s ease-in-out, background-color 0.4s ease;
 }
 .volume-slider:active::-webkit-slider-thumb {
     transform: scale(1.2); /* Powiększenie kciuka podczas przeciągania */
@@ -167,23 +216,23 @@ body {
     background: var(--text-primary);
     border-radius: 50%;
     cursor: pointer;
-    border: none; 
-    transition: transform 0.15s ease-in-out, background-color 0.3s ease;
+    border: none;
+    transition: transform 0.15s ease-in-out, background-color 0.4s ease;
 }
 .volume-slider:active::-moz-range-thumb {
     transform: scale(1.2);
 } /* Wielkość przycisków to 18px */
 .controls { display:flex; justify-content:center; align-items:center; gap: 18px; margin-bottom:30px; }
-.control-btn { width:48px; height:48px; display:flex; align-items:center; justify-content:center; border-radius:50%; cursor:pointer; background-color: rgba(255,255,255,0.1); transition: background-color 0.2s, transform 0.1s ease-out; }
-.control-btn:hover { background-color: rgba(255,255,255,0.2); }
+.control-btn { width:48px; height:48px; display:flex; align-items:center; justify-content:center; border-radius:50%; cursor:pointer; background-color: var(--control-btn-bg); transition: background-color 0.4s ease, transform 0.1s ease-out; }
+.control-btn:hover { background-color: var(--control-btn-bg-hover); }
 .control-btn:active {
     transform: scale(0.9);
-    background-color: rgba(255,255,255,0.15);
+    background-color: var(--control-btn-bg-active);
 }
-.control-btn svg { fill: var(--text-primary); transition: fill 0.3s ease; }
+.control-btn svg { fill: var(--text-primary); transition: fill 0.4s ease; }
 .control-btn.active svg { fill: var(--primary); }
 .repeat-btn .icon-repeat-one { display: none; }
-.play-btn { width:70px; height:70px; background-color: var(--primary); transition: background-color 0.3s ease, transform 0.1s ease-out; }
+.play-btn { width:70px; height:70px; background-color: var(--primary); transition: background-color 0.4s ease, transform 0.1s ease-out; }
 .play-btn .icon-pause { display: none; } 
 .play-btn:hover { background-color: var(--primary-hover); }
 .playing .play-btn .icon-play {
@@ -192,32 +241,27 @@ body {
 .playing .play-btn .icon-pause {
     display: block;
 }
-.player-footer { background-color:var(--card-bg); border-top-left-radius:35px; border-top-right-radius:15px; box-shadow:0 -5px 15px rgba(0,0,0,0.3); position:absolute; bottom:0; left:0; right:0; transform: translateY(calc(100% + 20px)); transition: transform 0.3s ease-in-out, background-color 0.3s ease; display: flex; flex-direction: column; max-height: 520px; }
-.playlist-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--control-bg); flex-shrink: 0; }
+.player-footer { background-color:var(--card-bg); border-top-left-radius:35px; border-top-right-radius:15px; box-shadow:0 -5px 15px rgba(0,0,0,0.3); position:absolute; bottom:0; left:0; right:0; transform: translateY(calc(100% + 20px)); transition: transform 0.3s ease-in-out, background-color 0.4s ease; display: flex; flex-direction: column; max-height: 520px; z-index: 2; }
+.playlist-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--control-bg); flex-shrink: 0; transition: border-color 0.4s ease; }
 .playlist-title { font-size: 18px; font-weight: 600; }
 .manage-playlists-btn { background: none; border: 1px solid var(--text-secondary); color: var(--text-secondary); padding: 5px 10px; border-radius: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 13px; transition: all 0.2s; }
 .manage-playlists-btn:hover { background-color: var(--control-bg); color: var(--text-primary); border-color: var(--control-bg); }
 .manage-playlists-btn svg { fill: currentColor; width: 16px; height: 16px; }
 .song-list { list-style:none; overflow-y:auto; padding: 0 20px 35px; flex-grow: 1; }
-.song-item { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.1); transition:background-color 0.2s; gap: 15px; }
-.song-item:hover { background-color: rgba(255,255,255,0.05); }
+.song-item { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--divider-color); transition: background-color 0.2s, border-color 0.4s ease; gap: 15px; }
+.song-item:hover { background-color: var(--list-item-hover-bg); }
 .song-item:last-child { border-bottom:none; }
 .song-number { color:var(--text-secondary); font-size:14px; width:30px; text-align:center; }
 .song-thumbnail { width:40px; height:40px; border-radius:5px; overflow:hidden; margin-right:15px; }
 .song-thumbnail img { width:100%; height:100%; object-fit:cover; }
 .song-item-info { flex:1; cursor: pointer; min-width: 0; }
-.song-item-title { font-size:15px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition: color 0.3s ease; }
+.song-item-title { font-size:15px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition: color 0.4s ease; }
 .song-item-artist { font-size:13px; color:var(--text-secondary); }
 .song-item.active .song-item-title {
     color: var(--primary);
 }
-.song-item-duration { font-size:13px; color:var(--text-secondary); margin-left: 15px; }
-.song-item-actions {
-    margin-left: auto;
-    padding-left: 10px;
-    display: flex;
-    align-items: center;
-}
+.song-item-duration { font-size:13px; color:var(--text-secondary); }
+.song-item-actions { margin-left: auto; padding-left: 10px; }
 .favorite-btn { background: none; border: none; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center; }
 .favorite-btn svg { stroke: var(--text-secondary); fill: none; transition: all 0.2s; }
 .favorite-btn:hover svg { stroke: var(--primary); }
@@ -225,20 +269,6 @@ body {
 .favorite-btn.is-favorite .icon-heart-empty { display: none; }
 .favorite-btn.is-favorite .icon-heart-filled { display: block; fill: var(--primary); }
 .song-list::-webkit-scrollbar { width:5px; }
-.more-options-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.more-options-btn svg {
-    fill: var(--text-secondary);
-    transition: fill 0.2s;
-}
-.more-options-btn:hover svg { fill: var(--text-primary); }
 .song-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius:10px; }
 .song-list::-webkit-scrollbar-thumb { background:var(--text-secondary); border-radius:10px; }
 @media (max-height:700px) { .album-cover { width:220px; height:220px; } }
@@ -284,7 +314,7 @@ body.is-ios .volume-container {
     background-color: var(--bg-color);
     z-index: 110; /* Above lyrics view */
     transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.4s ease;
     display: flex;
     flex-direction: column;
 }
@@ -300,6 +330,7 @@ body.playlist-manager-open .playlist-manager-view {
     font-weight: 600;
     flex-shrink: 0;
     border-bottom: 1px solid var(--control-bg);
+    transition: border-color 0.4s ease;
 }
 .playlist-manager-list {
     list-style: none;
@@ -311,7 +342,7 @@ body.playlist-manager-open .playlist-manager-view {
     font-size: 18px;
     border-bottom: 1px solid var(--control-bg);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, border-color 0.4s ease, color 0.4s ease;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -365,65 +396,110 @@ body.playlist-manager-open .playlist-manager-view {
 .delete-playlist-btn:hover svg {
     fill: #ff453a; /* iOS red */
 }
-.playlist-manager-item:hover {
-    background-color: rgba(255,255,255,0.05);
+.playlist-manager-item:hover {    
+    background-color: var(--list-item-hover-bg);
 }
 .playlist-manager-item.active {
     color: var(--primary);
     font-weight: 600;
 }
 
-/* Add to Playlist View */
-.add-to-playlist-view {
-    position: absolute;
+/* Modal (Pop-up) Styles */
+.modal-overlay {
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--bg-color);
-    z-index: 120; /* Above other views */
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    display: flex;
-    flex-direction: column;
-}
-body.add-to-playlist-open .add-to-playlist-view {
-    transform: translateY(0);
-}
-.add-to-playlist-header {
-    padding: 15px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 18px;
-    font-weight: 600;
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--control-bg);
-}
-.close-add-to-playlist-btn {
-    cursor: pointer;
-    padding: 5px;
+    background-color: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 200;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
 }
-.close-add-to-playlist-btn svg { fill: var(--text-secondary); transition: fill 0.2s; }
-.close-add-to-playlist-btn:hover svg { fill: var(--text-primary); }
-.add-to-playlist-list {
-    list-style: none;
-    padding: 10px;
-    overflow-y: auto;
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease;
 }
-.add-to-playlist-item {
-    padding: 15px 20px;
+.modal {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 14px;
+    width: calc(100% - 40px);
+    max-width: 320px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    transform: scale(0.95);
+    transition: transform 0.3s ease, background-color 0.4s ease;
+}
+.modal-overlay.visible .modal {
+    transform: scale(1);
+}
+.modal-title {
     font-size: 18px;
-    border-bottom: 1px solid var(--control-bg);
-    cursor: pointer;
-    transition: background-color 0.2s;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 8px;
 }
-.add-to-playlist-item:hover { background-color: rgba(255,255,255,0.05); }
-.add-to-playlist-item.remove-item { color: #ff453a; }
-.add-to-playlist-item.remove-item:hover { background-color: rgba(255, 69, 58, 0.15); }
+.modal-description {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 20px;
+}
+.modal input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--control-bg);
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-size: 16px;
+    margin-bottom: 20px;
+    outline: none;
+    -webkit-user-select: auto; /* Allow text selection in input */
+    -moz-user-select: auto;
+    -ms-user-select: auto;
+    user-select: auto;
+}
+.modal input[type="text"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3);
+}
+.modal-actions {
+    display: flex;
+    gap: 10px;
+}
+.modal-actions button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.4s ease, color 0.4s ease, transform 0.1s;
+}
+.modal-actions button:active {
+    transform: scale(0.98);
+}
+.modal-btn-primary {
+    background-color: var(--primary);
+    color: white;
+}
+.modal-btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+.modal-btn-secondary {
+    background-color: var(--control-bg);
+    color: var(--text-primary);
+}
+.modal-btn-secondary:hover {
+    background-color: #4a4a4c; /* Slightly lighter control bg */
+}
 
 @media (min-width: 800px) {
     .song-list {
@@ -435,15 +511,22 @@ body.add-to-playlist-open .add-to-playlist-view {
 <body class="theme-vampire">
 <div class="header">
     <span>Bubify</span>
-    <div class="theme-switcher" id="theme-switcher"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></div>
+    <div class="header-actions">
+        <button id="login-spotify-btn" title="Zaloguj się z Spotify">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.923 17.46c-.225.352-.674.465-.923.243-2.58-1.58-5.83-1.94-9.702-1.06-.38.09-.676-.18-.765-.554s.18-.675.554-.765c4.22-1.02 7.79-.6 10.68 1.22.26.18.33.57.15.856zm1.23-2.73c-.28.43-.84.56-1.27.28-2.95-1.8-7.33-2.3-10.78-1.25-.46.14-.98-.12-1.12-.58-.14-.46.12-.98.58-1.12C11.27 10.85 16.1 11.4 19.4 13.5c.4.25.53.8.28 1.23zm.12-3.12c-3.5-2.1-9.1-2.5-12.6-.14-.55.21-1.17-.15-1.38-.7s.15-1.17.7-1.38c4.02-1.58 10.22-1.1 14.23 1.4.5.3.68.95.38 1.45s-.95.68-1.45.37z"/>
+            </svg>
+        </button>
+        <div class="theme-switcher" id="theme-switcher"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></div>
+    </div>
 </div>
 <div class="now-playing">
 <div class="album-cover">
 <img src="https://placehold.co/100x100/2c2c2e/ffffff?text=?" alt="Okładka albumu" />
 </div>
 <div class="song-info">
-<div class="song-title">Ładowanie...</div>
-<div class="song-artist">...</div>
+<div class="song-title">Zaloguj się przez Spotify</div>
+<div class="song-artist">aby wczytać muzykę</div>
 </div>
 <div class="progress-container">
 <div class="progress-bar">
@@ -504,15 +587,17 @@ body.add-to-playlist-open .add-to-playlist-view {
     <ul class="playlist-manager-list" id="playlist-manager-list">
     </ul>
 </div>
-<div class="add-to-playlist-view">
-    <div class="add-to-playlist-header">
-        <span id="add-to-playlist-title">Dodaj do...</span>
-        <div class="close-add-to-playlist-btn">
-            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+
+<div class="modal-overlay" id="create-playlist-modal-overlay">
+    <div class="modal">
+        <h3 class="modal-title">Nowa playlista</h3>
+        <p class="modal-description">Wprowadź nazwę dla swojej nowej playlisty.</p>
+        <input type="text" id="new-playlist-name-input" placeholder="np. Wieczorne granie">
+        <div class="modal-actions">
+            <button class="modal-btn-secondary" id="cancel-create-playlist-btn">Anuluj</button>
+            <button class="modal-btn-primary" id="confirm-create-playlist-btn">Utwórz</button>
         </div>
     </div>
-    <ul class="add-to-playlist-list" id="add-to-playlist-list">
-    </ul>
 </div>
 
 <script>
@@ -540,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const durationEl = document.getElementById('duration');
     const songListEl = document.getElementById('song-list');
     const queueBtn = document.querySelector('.queue-btn');
-    const body = document.body;
+    const body = document.body;    
     const themeSwitcher = document.getElementById('theme-switcher');
     const volumeSlider = document.getElementById('volume-slider');
     const albumCover = document.querySelector('.album-cover');
@@ -554,10 +639,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const closePlaylistManagerBtn = document.querySelector('.close-playlist-manager-btn');
     const playlistManagerList = document.getElementById('playlist-manager-list');
     const createPlaylistBtn = document.querySelector('.create-playlist-btn');
-    const addToPlaylistView = document.querySelector('.add-to-playlist-view');
-    const closeAddToPlaylistBtn = document.querySelector('.close-add-to-playlist-btn');
-    const addToPlaylistList = document.getElementById('add-to-playlist-list');
-    const addToPlaylistTitle = document.getElementById('add-to-playlist-title');
+    // Nowe elementy modala
+    const createPlaylistModalOverlay = document.getElementById('create-playlist-modal-overlay');
+    const newPlaylistNameInput = document.getElementById('new-playlist-name-input');
+    const confirmCreatePlaylistBtn = document.getElementById('confirm-create-playlist-btn');
+    const cancelCreatePlaylistBtn = document.getElementById('cancel-create-playlist-btn');
+
+    // --- Zmienne globalne dla Spotify ---
+    let spotifyPlayer = null;
+    let spotifyDeviceId = null;
+    let spotifyAccessToken = null;
+    // Elementy dla Spotify
+    const loginSpotifyBtn = document.getElementById('login-spotify-btn');
 
     let isPlaying = false;
     let currentSongIndex = 0;
@@ -565,13 +658,99 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentRotation = 0;
     let animationFrameId = null;
     let repeatMode = 0; // 0: none, 1: all, 2: one
-    let songForAction = null; // Przechowuje utwór do operacji (dodaj/usuń)
 
     // --- Nowa struktura danych dla playlist ---
     let allSongs = []; // Główna lista wszystkich obiektów piosenek
     let playlists = {}; // { "nazwa": [url1, url2], ... }
     let activePlaylistName = 'Wszystkie utwory';
     let songs = []; // Widok piosenek dla aktywnej playlisty
+
+    // --- Logika dla Spotify ---
+
+    // Zastąp tym ID klienta ze swojego panelu deweloperskiego Spotify
+    const SPOTIFY_CLIENT_ID = 'cf0998cbebe04f34ba460cae3d80dc16'; 
+    const SPOTIFY_REDIRECT_URI = 'https://bearsleeping.github.io/Bubify/';
+    const SPOTIFY_SCOPES = [
+        'streaming',
+        'user-read-email',
+        'user-read-private',
+        'user-library-read',
+        'user-library-modify',
+        'user-read-playback-state',
+        'user-modify-playback-state'
+    ].join(' ');
+
+    loginSpotifyBtn.addEventListener('click', () => {
+        const authUrl = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(SPOTIFY_REDIRECT_URI)}&scope=${encodeURIComponent(SPOTIFY_SCOPES)}`;
+        window.location.href = authUrl;
+    });
+
+    // Po powrocie ze strony logowania Spotify, sprawdzamy czy w URL jest token
+    function getAccessTokenFromUrl() {
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        return params.get('access_token');
+    }
+
+    function initializeSpotifyPlayer(token) {
+        spotifyAccessToken = token;
+
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            spotifyPlayer = new Spotify.Player({
+                name: 'Bubify Web Player',
+                getOAuthToken: cb => { cb(token); },
+                volume: 0.5
+            });
+
+            // Error handling
+            spotifyPlayer.addListener('initialization_error', ({ message }) => { console.error('Initialization Error:', message); });
+            spotifyPlayer.addListener('authentication_error', ({ message }) => { 
+                console.error('Authentication Error:', message);
+                // Token mógł wygasnąć, przekieruj do logowania
+                window.location.hash = ''; // Wyczyść stary token
+                loginSpotifyBtn.click();
+            });
+            spotifyPlayer.addListener('account_error', ({ message }) => { console.error('Account Error:', message); alert('Błąd konta Spotify. Upewnij się, że używasz konta Premium.'); });
+            spotifyPlayer.addListener('playback_error', ({ message }) => { console.error('Playback Error:', message); });
+
+            // Playback status updates
+            spotifyPlayer.addListener('player_state_changed', state => { 
+                if (!state) { return; }
+                console.log('Zmiana stanu odtwarzacza Spotify:', state);
+
+                // Aktualizacja UI na podstawie stanu ze Spotify
+                isPlaying = !state.paused;
+                body.classList.toggle('playing', isPlaying);
+
+                const progressMs = state.position;
+                const durationMs = state.duration;
+                const progressPercent = (durationMs > 0) ? (progressMs / durationMs) * 100 : 0;
+                progress.style.width = `${progressPercent}%`;
+                currentTimeEl.textContent = formatTime(progressMs / 1000);
+                durationEl.textContent = formatTime(durationMs / 1000);
+
+                // Możesz też zaktualizować info o piosence, jeśli zmieniła się w innej aplikacji
+            });
+
+            // Ready
+            spotifyPlayer.addListener('ready', ({ device_id }) => {
+                console.log('Odtwarzacz Spotify jest gotowy z ID urządzenia', device_id);
+                spotifyDeviceId = device_id;
+            });
+
+            // Not Ready
+            spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+                console.log('Urządzenie stało się niedostępne', device_id);
+            });
+
+            // Connect to the player!
+            spotifyPlayer.connect().then(success => {
+                if (success) {
+                    console.log('Połączono z odtwarzaczem Spotify.');
+                }
+            });
+        };
+    }
 
     // --- Przełączanie i zapamiętywanie motywu ---
     function applyTheme(theme) {
@@ -584,10 +763,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     themeSwitcher.addEventListener('click', () => {
-        body.classList.toggle('theme-vampire');
-        const newTheme = body.classList.contains('theme-vampire') ? 'vampire' : 'default';
+        const isVampire = body.classList.contains('theme-vampire');
+        const newTheme = isVampire ? 'default' : 'vampire';
+        applyTheme(newTheme);
         localStorage.setItem('musicPlayerTheme', newTheme);
     });
+
     // Zastosuj motyw zapisany w pamięci przy starcie aplikacji
     applyTheme(localStorage.getItem('musicPlayerTheme'));
 
@@ -624,16 +805,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function createPlaylist() {
-        const name = prompt('Wprowadź nazwę nowej playlisty:');
+        newPlaylistNameInput.value = ''; // Wyczyść poprzednią wartość
+        createPlaylistModalOverlay.classList.add('visible');
+        // Małe opóźnienie dla focus, aby zadziałał po tym jak modal stanie się widoczny
+        setTimeout(() => newPlaylistNameInput.focus(), 50);
+    }
+
+    function hideCreatePlaylistModal() {
+        createPlaylistModalOverlay.classList.remove('visible');
+    }
+
+    function handleConfirmCreatePlaylist() {
+        const name = newPlaylistNameInput.value;
         if (name && name.trim() !== '') {
             const trimmedName = name.trim();
             if (playlists[trimmedName]) {
-                alert('Playlista o tej nazwie już istnieje!');
+                alert('Playlista o tej nazwie już istnieje!'); // To też można by zamienić na ładniejszy alert w przyszłości
             } else {
                 playlists[trimmedName] = [];
                 savePlaylists();
                 populatePlaylistManager();
+                hideCreatePlaylistModal();
             }
+        } else {
+            // Opcjonalnie: pokaż błąd, jeśli nazwa jest pusta
+            alert('Nazwa playlisty nie może być pusta.');
         }
     }
 
@@ -681,99 +877,79 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- Zarządzanie dodawaniem/usuwaniem utworów ---
-    function openAddToPlaylistView(song) {
-        songForAction = song;
-        addToPlaylistTitle.textContent = `Dodaj "${song.title}" do...`;
-        populateAddToPlaylistView();
-        body.classList.add('add-to-playlist-open');
+
+    // --- Główna logika inicjalizacji ---
+
+    const spotifyToken = getAccessTokenFromUrl();
+    if (spotifyToken) {
+        console.log("Uzyskano token Spotify!", spotifyToken);
+        initializeSpotifyPlayer(spotifyToken);
+        // Tutaj ukryłbyś przycisk logowania i zaczął wczytywać dane ze Spotify
+        loginSpotifyBtn.style.display = 'none'; // Ukryj przycisk po zalogowaniu
+        loadFromSpotify(spotifyToken);
+        managePlaylistsBtn.style.display = 'none'; // Ukryj zarządzanie playlistami w trybie Spotify
+    } else {
+        // Jeśli nie ma tokenu, aplikacja po prostu czeka na zalogowanie.
+        // Stara logika ładowania z GitHub została usunięta.
+        console.log("Oczekiwanie na logowanie Spotify...");
     }
 
-    function closeAddToPlaylistView() {
-        body.classList.remove('add-to-playlist-open');
+    function loadFromSpotify(token) {
+        // Pobierz zapisane utwory użytkownika
+        fetch('https://api.spotify.com/v1/me/tracks?limit=50', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => {
+            if (res.status === 401) { // Token wygasł
+                window.location.hash = '';
+                loginSpotifyBtn.click();
+                return;
+            }
+            return res.json();
+        })
+        .then(data => {
+            if (!data || !data.items) {
+                console.error("Nie udało się pobrać utworów ze Spotify", data);
+                return;
+            }
+            allSongs = data.items.map(item => ({
+                title: item.track.name,
+                artist: item.track.artists.map(a => a.name).join(', '),
+                duration: formatTime(item.track.duration_ms / 1000),
+                cover: item.track.album.images[0]?.url || 'https://placehold.co/100x100/2c2c2e/ffffff?text=?',
+                audio: item.track.uri, // Używamy URI jako identyfikatora
+                isSpotify: true
+            }));
+
+            // Na razie prosta playlista "Zapisane utwory"
+            playlists = { 'Zapisane utwory': allSongs.map(s => s.audio) };
+            setActivePlaylist('Zapisane utwory');
+        })
+        .catch(err => console.error("Błąd podczas pobierania utworów ze Spotify:", err));
     }
 
-    function populateAddToPlaylistView() {
-        addToPlaylistList.innerHTML = '';
-
-        // Opcja usunięcia, jeśli jesteśmy na customowej playliście
-        if (activePlaylistName !== 'Wszystkie utwory' && activePlaylistName !== 'Ulubione') {
-            const removeItem = document.createElement('li');
-            removeItem.classList.add('add-to-playlist-item', 'remove-item');
-            removeItem.textContent = `Usuń z playlisty "${activePlaylistName}"`;
-            removeItem.addEventListener('click', removeSongFromCurrentPlaylist);
-            addToPlaylistList.appendChild(removeItem);
+    function playSpotifyTrack(trackUri) {
+        if (!spotifyDeviceId) {
+            alert("Odtwarzacz Spotify nie jest jeszcze gotowy. Spróbuj ponownie za chwilę.");
+            return;
         }
-
-        // Lista playlist do których można dodać utwór
-        Object.keys(playlists)
-            .filter(name => name !== 'Wszystkie utwory')
-            .forEach(name => {
-                const li = document.createElement('li');
-                li.classList.add('add-to-playlist-item');
-                li.textContent = name;
-                li.addEventListener('click', () => addSongToPlaylist(name));
-                addToPlaylistList.appendChild(li);
-            });
+        fetch(`https://api.spotify.com/v1/me/player/play?device_id=${spotifyDeviceId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ uris: [trackUri] }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${spotifyAccessToken}`
+            },
+        }).then(res => {
+            if (res.status === 204) {
+                console.log("Odtwarzanie utworu Spotify rozpoczęte.");
+                isPlaying = true;
+                body.classList.add('playing');
+            } else {
+                console.error("Nie udało się rozpocząć odtwarzania na Spotify.", res);
+            }
+        });
     }
-
-    function addSongToPlaylist(playlistName) {
-        if (!songForAction || !playlists[playlistName]) return;
-
-        const songUrl = songForAction.audio;
-        if (!playlists[playlistName].includes(songUrl)) {
-            playlists[playlistName].push(songUrl);
-            savePlaylists();
-        }
-        // Można dodać powiadomienie "Dodano!"
-        closeAddToPlaylistView();
-    }
-
-    function removeSongFromCurrentPlaylist() {
-        if (!songForAction || activePlaylistName === 'Wszystkie utwory' || activePlaylistName === 'Ulubione') return;
-
-        const songUrl = songForAction.audio;
-        const index = playlists[activePlaylistName].indexOf(songUrl);
-        if (index > -1) {
-            playlists[activePlaylistName].splice(index, 1);
-            savePlaylists();
-            setActivePlaylist(activePlaylistName); // Odśwież widok
-        }
-        closeAddToPlaylistView();
-    }
-
-    // Pobranie mp3 z repozytorium GitHub
-    loadPlaylists();
-    fetch('https://api.github.com/repos/bearsleeping/Muzyka/contents/')
-      .then(res => res.json())
-      .then(files => {
-          allSongs = files
-              .filter(f => f.name.endsWith('.mp3'))
-              .map(f => {
-                  const name = f.name.replace(/\.mp3$/, '');
-                  const parts = name.split(' - ');
-                  const artist = parts.length > 1 ? parts[0].trim() : 'Nieznany artysta';
-                  const title = parts.length > 1 ? parts[1].trim() : name;
-                  
-                  return {
-                      title: title,
-                      artist: artist,
-                      duration: '0:00',
-                      cover: 'https://placehold.co/100x100/2c2c2e/ffffff?text=?', // Placeholder
-                      audio: f.download_url
-                  };
-              });
-          
-          // Wypełnij playlistę "Wszystkie utwory"
-          playlists['Wszystkie utwory'] = allSongs.map(s => s.audio);
-
-          // Ustaw aktywną playlistę (ostatnio używaną lub domyślną)
-          const lastActivePlaylist = localStorage.getItem('bubify_lastActivePlaylist') || 'Wszystkie utwory';
-          setActivePlaylist(playlists[lastActivePlaylist] ? lastActivePlaylist : 'Wszystkie utwory');
-
-          fetchAlbumCovers(); // Pobierz okładki w tle
-      })
-      .catch(err => console.error("Błąd podczas pobierania listy utworów:", err));
 
     function setActivePlaylist(name) {
         if (!playlists[name]) {
@@ -828,9 +1004,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         <svg class="icon-heart-empty" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                         <svg class="icon-heart-filled" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                     </button>
-                    <button class="more-options-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-                    </button>
                 </div>
             `;
             li.querySelector('.song-item-info').addEventListener('click', () => {
@@ -844,10 +1017,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.stopPropagation();
                 toggleFavorite(song);
             });
-            li.querySelector('.more-options-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                openAddToPlaylistView(song);
-            });
             songListEl.appendChild(li);
         });
     }
@@ -860,7 +1029,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('.album-cover img').src = song.cover;
         durationEl.textContent = song.duration;
 
-        audio.src = song.audio;
+        if (song.isSpotify) {
+            // Dla Spotify nie ustawiamy audio.src, bo odtwarzanie jest obsługiwane przez API
+            audio.src = ''; // Wyczyść źródło, aby uniknąć konfliktów
+        } else {
+            // Stara logika dla plików mp3
+            audio.src = song.audio;
+        }
 
         // Sprawdzenie artysty i dodanie/usunięcie klasy dla cienia
         albumCover.classList.remove('type-o-negative-glow', 'rammstein-glow');
@@ -902,28 +1077,62 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function playSong() {
-        if(!audio.src) return;
-        isPlaying = true;
-        body.classList.add('playing'); // Ta klasa kontroluje teraz widoczność ikony
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = requestAnimationFrame(rotateCover);
-        audio.play();
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = "playing";
+        const song = songs[currentSongIndex];
+        if (!song) return;
+
+        if (song.isSpotify) {
+            // Jeśli utwór jest już załadowany i zapauzowany, wznów go.
+            // Jeśli nie, odtwórz go od początku (to obsłuży kliknięcie na nowy utwór z listy).
+            if (spotifyPlayer && isPlaying === false && spotifyPlayer.state?.track_window.current_track.uri === song.audio) {
+                spotifyPlayer.resume().then(() => {
+                    console.log('Wznowiono odtwarzanie Spotify.');
+                    isPlaying = true;
+                    body.classList.add('playing');
+                });
+            } else {
+                playSpotifyTrack(song.audio);
+            } 
+        } else {
+            if(!audio.src) return;
+            isPlaying = true;
+            body.classList.add('playing');
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = requestAnimationFrame(rotateCover);
+            audio.play();
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = "playing";
+            }
         }
     }
 
     function pauseSong() {
-        isPlaying = false;
-        body.classList.remove('playing');
-        cancelAnimationFrame(animationFrameId);
-        audio.pause();
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = "paused";
+        const song = songs[currentSongIndex];
+        if (!song) return;
+
+        if (song.isSpotify) {
+            if (spotifyPlayer) {
+                spotifyPlayer.pause().then(() => {
+                    console.log('Zapauzowano odtwarzanie Spotify.');
+                    isPlaying = false;
+                    body.classList.remove('playing');
+                });
+            }
+        } else {
+            isPlaying = false;
+            body.classList.remove('playing');
+            cancelAnimationFrame(animationFrameId);
+            audio.pause();
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = "paused";
+            }
         }
     }
 
     function nextSong() {
+        if (songs[currentSongIndex]?.isSpotify && spotifyPlayer) {
+            spotifyPlayer.nextTrack().then(() => console.log('Następny utwór Spotify.'));
+            return;
+        }
         if (songs.length === 0) return;
         currentSongIndex = (currentSongIndex + 1) % songs.length;
         loadSong(currentSongIndex);
@@ -931,6 +1140,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function prevSong() {
+        if (songs[currentSongIndex]?.isSpotify && spotifyPlayer) {
+            spotifyPlayer.previousTrack().then(() => console.log('Poprzedni utwór Spotify.'));
+            return;
+        }
         if (songs.length === 0) return;
         currentSongIndex = (currentSongIndex - 1 + songs.length) % songs.length;
         loadSong(currentSongIndex);
@@ -938,6 +1151,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function fetchAlbumCovers() {
+        if (spotifyAccessToken || songs[0]?.isSpotify) return; // Nie pobieraj z iTunes, jeśli mamy dane ze Spotify
         allSongs.forEach((song, index) => {
             if (song.artist === 'Nieznany artysta') return;
 
@@ -984,11 +1198,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         savePlaylists();
         // Odśwież widok, aby zaktualizować serduszka
-        if (activePlaylistName === 'Ulubione') {
-            setActivePlaylist('Ulubione'); // Pełne odświeżenie, jeśli jesteśmy na liście ulubionych
-        } else {
-            populatePlaylist(); // Tylko odświeżenie serduszek w bieżącym widoku
-        }
+        populatePlaylist();
     }
 
     function toggleQueue() {
@@ -1105,6 +1315,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setSongPosition(e) {
         if (!audio.duration) return;
+        if (songs[currentSongIndex]?.isSpotify && spotifyPlayer) {
+            const rect = progressBar.getBoundingClientRect();
+            const newPosition = (e.clientX - rect.left) / rect.width;
+            spotifyPlayer.seek(newPosition * songs[currentSongIndex].duration_ms).then(() => console.log('Przewinięto utwór Spotify.'));
+        }
         const rect = progressBar.getBoundingClientRect();
         // Dla zdarzeń dotykowych użyj pierwszego punktu dotyku
         const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
@@ -1152,6 +1367,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('touchend', handleProgressScrubEnd);
 
     audio.addEventListener('timeupdate', () => {
+        if (songs[currentSongIndex]?.isSpotify) return; // Aktualizacje dla Spotify idą przez `player_state_changed`
         if(!audio.duration) return;
         const progressPercent = (audio.currentTime/audio.duration)*100;
         progress.style.width = `${progressPercent}%`;
@@ -1160,6 +1376,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     audio.addEventListener('loadedmetadata', () => {
+        if (songs[currentSongIndex]?.isSpotify) return;
         if (audio.duration) {
             const formattedDuration = formatTime(audio.duration);
             durationEl.textContent = formattedDuration;
@@ -1173,6 +1390,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     audio.addEventListener('ended', () => {
+        if (songs[currentSongIndex]?.isSpotify) return; // Spotify samo przejdzie do następnego utworu
         if (repeatMode === 2) { // Powtarzaj jeden
             audio.currentTime = 0;
             playSong();
@@ -1195,8 +1413,17 @@ document.addEventListener('DOMContentLoaded', function() {
     repeatBtn.addEventListener('click', cycleRepeatMode);
     managePlaylistsBtn.addEventListener('click', togglePlaylistManager);
     closePlaylistManagerBtn.addEventListener('click', togglePlaylistManager);
+
+    // Zdarzenia dla nowego modala tworzenia playlisty
     createPlaylistBtn.addEventListener('click', createPlaylist);
-    closeAddToPlaylistBtn.addEventListener('click', closeAddToPlaylistView);
+    cancelCreatePlaylistBtn.addEventListener('click', hideCreatePlaylistModal);
+    confirmCreatePlaylistBtn.addEventListener('click', handleConfirmCreatePlaylist);
+    createPlaylistModalOverlay.addEventListener('click', (e) => {
+        if (e.target === createPlaylistModalOverlay) { // Zamykanie po kliknięciu w tło
+            hideCreatePlaylistModal();
+        }
+    });
+    newPlaylistNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleConfirmCreatePlaylist(); });
 
     volumeSlider.addEventListener('input', (e) => {
         audio.volume = e.target.value / 100;
