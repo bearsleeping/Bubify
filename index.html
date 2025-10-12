@@ -680,19 +680,68 @@ document.addEventListener('DOMContentLoaded', function() {
         'user-modify-playback-state'
     ].join(' ');
 
-    loginSpotifyBtn.addEventListener('click', () => {
-        const authUrl = `https://accounts.spotify.com/authorize?client_id=${SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(SPOTIFY_REDIRECT_URI)}&scope=${encodeURIComponent(SPOTIFY_SCOPES)}`;
-        window.location.href = authUrl;
-    });
+    // --- Nowa, bezpieczna logika logowania (Authorization Code Flow with PKCE) ---
 
-    // Po powrocie ze strony logowania Spotify, sprawdzamy czy w URL jest token
-    function getAccessTokenFromUrl() {
-        const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
-        return params.get('access_token');
+    // Funkcja do generowania losowego ciągu znaków dla code_verifier
+    function generateRandomString(length) {
+        let text = '';
+        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        for (let i = 0; i < length; i++) {
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        return text;
     }
 
-    function initializeSpotifyPlayer(token) {
+    // Funkcja do generowania code_challenge na podstawie code_verifier
+    async function generateCodeChallenge(codeVerifier) {
+        const data = new TextEncoder().encode(codeVerifier);
+        const digest = await window.crypto.subtle.digest('SHA-256', data);
+        return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+    }
+
+    // 1. Przekierowanie do Spotify w celu uzyskania kodu autoryzacji
+    loginSpotifyBtn.addEventListener('click', async () => {
+        const codeVerifier = generateRandomString(128);
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+        // Zapisz codeVerifier w pamięci przeglądarki, aby użyć go po powrocie
+        window.localStorage.setItem('spotify_code_verifier', codeVerifier);
+
+        const authUrl = new URL("https://accounts.spotify.com/authorize");
+        const params = {
+            client_id: SPOTIFY_CLIENT_ID,
+            response_type: 'code', // Zmienione z 'token' na 'code'
+            redirect_uri: SPOTIFY_REDIRECT_URI,
+            scope: SPOTIFY_SCOPES,
+            code_challenge_method: 'S256',
+            code_challenge: codeChallenge,
+        };
+        authUrl.search = new URLSearchParams(params).toString();
+        window.location.href = authUrl.toString();
+    });
+
+    // 2. Wymiana kodu na token dostępowy po powrocie
+    async function exchangeCodeForToken(code) {
+        const codeVerifier = window.localStorage.getItem('spotify_code_verifier');
+
+        const response = await fetch("https://accounts.spotify.com/api/token", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                client_id: SPOTIFY_CLIENT_ID,
+                grant_type: 'authorization_code',
+                code: code,
+                redirect_uri: SPOTIFY_REDIRECT_URI,
+                code_verifier: codeVerifier,
+            }),
+        });
+        return await response.json();
+    }
+
+    function initializeSpotifyPlayer(token) { // Ta funkcja pozostaje bez zmian
         spotifyAccessToken = token;
 
         window.onSpotifyWebPlaybackSDKReady = () => {
@@ -880,17 +929,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Główna logika inicjalizacji ---
 
-    const spotifyToken = getAccessTokenFromUrl();
-    if (spotifyToken) {
-        console.log("Uzyskano token Spotify!", spotifyToken);
-        initializeSpotifyPlayer(spotifyToken);
-        // Tutaj ukryłbyś przycisk logowania i zaczął wczytywać dane ze Spotify
-        loginSpotifyBtn.style.display = 'none'; // Ukryj przycisk po zalogowaniu
-        loadFromSpotify(spotifyToken);
-        managePlaylistsBtn.style.display = 'none'; // Ukryj zarządzanie playlistami w trybie Spotify
+    // Sprawdź, czy wróciliśmy od Spotify z kodem autoryzacyjnym
+    const params = new URLSearchParams(window.location.search);
+    const authorizationCode = params.get('code');
+
+    if (authorizationCode) {
+        // Wymień kod na token
+        exchangeCodeForToken(authorizationCode).then(tokenData => {
+            console.log("Uzyskano token Spotify!", tokenData);
+            const accessToken = tokenData.access_token;
+            
+            initializeSpotifyPlayer(accessToken);
+            loginSpotifyBtn.style.display = 'none';
+            loadFromSpotify(accessToken);
+            managePlaylistsBtn.style.display = 'none';
+
+            // Wyczyść parametry z adresu URL, aby nie były widoczne
+            window.history.replaceState({}, document.title, "/Bubify/");
+        });
     } else {
-        // Jeśli nie ma tokenu, aplikacja po prostu czeka na zalogowanie.
-        // Stara logika ładowania z GitHub została usunięta.
         console.log("Oczekiwanie na logowanie Spotify...");
     }
 
