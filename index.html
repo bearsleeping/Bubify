@@ -1155,17 +1155,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!song) return;
 
         if (song.isSpotify) {
-            // Jeśli utwór jest już załadowany i zapauzowany, wznów go.
-            // Jeśli nie, odtwórz go od początku (to obsłuży kliknięcie na nowy utwór z listy).
-            if (spotifyPlayer && isPlaying === false && spotifyPlayer.state?.track_window.current_track.uri === song.audio) {
-                spotifyPlayer.resume().then(() => {
-                    console.log('Wznowiono odtwarzanie Spotify.');
-                    isPlaying = true;
-                    body.classList.add('playing');
-                });
-            } else {
-                playSpotifyTrack(song.audio);
-            } 
+            playSpotifyTrack(song.audio);
         } else {
             if(!audio.src) return;
             isPlaying = true;
@@ -1203,18 +1193,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function nextSong() {
-        if (songs[currentSongIndex]?.isSpotify && spotifyPlayer) {
-            spotifyPlayer.nextTrack().then(() => console.log('Następny utwór Spotify.'));
-            return;
-        }
         if (songs.length === 0) return;
-        currentSongIndex = (currentSongIndex + 1) % songs.length;
-        loadSong(currentSongIndex);
-        if (isPlaying) playSong();
+
+        if (songs[currentSongIndex]?.isSpotify && spotifyPlayer) {
+            spotifyPlayer.nextTrack().then(() => console.log('Przełączono na następny utwór Spotify.'));
+        } else {
+            currentSongIndex = (currentSongIndex + 1) % songs.length;
+            loadSong(currentSongIndex);
+            if (isPlaying) playSong();
+        }
     }
 
     function prevSong() {
-        if (songs[currentSongIndex]?.isSpotify && spotifyPlayer) {
+        if (songs.length === 0) return;
+
+        // Dla Spotify, API samo decyduje, czy cofnąć utwór, czy przejść do poprzedniego
+        if (songs[currentSongIndex]?.isSpotify && spotifyPlayer) { 
             spotifyPlayer.previousTrack().then(() => console.log('Poprzedni utwór Spotify.'));
             return;
         }
