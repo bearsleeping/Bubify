@@ -1354,17 +1354,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- KONFIGURACJA GITHUB (BAZA DANYCH W CHMURZE) ---
     const GH_CONFIG = {
         // Wypełnij poniższe dane swoimi:
-        TOKEN: '', // np. 'ghp_TwojTokenTutaj1234567890'
-        TOKEN: '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', // np. 'ghp_TwojTokenTutaj1234567890'
-        OWNER: '', // np. 'TwojNickGitHub'
-        REPO: '',  // np. 'bubify-db'
+        TOKEN: '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', // np. 'ghp_TwojTokenTutaj1234567890'
+        OWNER: 'bearsleeping', // <-- TUTAJ WPISZ SWÓJ NICK Z GITHUB
+        REPO: 'bubify-db',  // Nazwa repozytorium
         PATH: 'database.json' // Nazwa pliku w repozytorium
     };
 
     // Funkcja pobierająca dane z GitHub (Logowanie / Start)
     async function githubSyncDown() {
-        if (!GH_CONFIG.TOKEN || !GH_CONFIG.OWNER || !GH_CONFIG.REPO) {
-            console.log('Brak konfiguracji GitHub - działam offline.');
+        if (!GH_CONFIG.TOKEN || !GH_CONFIG.OWNER || !GH_CONFIG.REPO || GH_CONFIG.OWNER.includes('WPISZ')) {
+            console.log('Brak pełnej konfiguracji GitHub - działam offline.');
             return false;
         }
         
@@ -1402,7 +1401,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Funkcja wysyłająca dane do GitHub (Zapis)
     async function githubSyncUp() {
-        if (!GH_CONFIG.TOKEN || !GH_CONFIG.OWNER || !GH_CONFIG.REPO) return;
+        if (!GH_CONFIG.TOKEN || !GH_CONFIG.OWNER || !GH_CONFIG.REPO || GH_CONFIG.OWNER.includes('WPISZ')) {
+            console.error("Błąd synchronizacji: Nie uzupełniono OWNER lub REPO w kodzie.");
+            showToast("Błąd: Uzupełnij swój nick GitHub w kodzie!");
+            return;
+        }
 
         // 1. Pobierz aktualne SHA (aby uniknąć konfliktów)
         let sha = localStorage.getItem('gh_sha');
