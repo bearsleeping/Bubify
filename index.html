@@ -55,6 +55,7 @@ body {
 .header > span {
     font-family: 'Pacifico', cursive;
     font-size: 24px;
+    font-size: 28px;
     font-weight: 400; /* Czcionki ozdobne często wyglądają lepiej bez pogrubienia */
     transform: translateY(2px); /* Delikatne dopasowanie pionowe */
 }
@@ -624,6 +625,161 @@ body.add-to-playlist-open .add-to-playlist-content {
 .edit-playlist-btn svg { fill: var(--text-secondary); width: 24px; height: 24px; transition: fill 0.2s; }
 .edit-playlist-btn:hover svg { fill: var(--text-primary); }
 
+/* Auth View (Login/Register) */
+.auth-view {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--bg-color);
+    z-index: 300;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: transform 0.3s ease-in-out;
+}
+.auth-view.hidden { transform: translateY(-100%); pointer-events: none; }
+.auth-container {
+    width: 90%; max-width: 350px;
+    background: var(--control-bg);
+    padding: 30px; border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    text-align: center;
+}
+.auth-logo { font-family: 'Pacifico', cursive; font-size: 36px; margin-bottom: 20px; color: var(--primary); }
+.auth-input {
+    width: 100%; padding: 12px; margin-bottom: 15px;
+    background: rgba(255,255,255,0.05); border: 1px solid transparent;
+    border-radius: 4px; color: #fff; outline: none;
+}
+.auth-input:focus { border-color: var(--primary); background: rgba(255,255,255,0.1); }
+.auth-btn {
+    width: 100%; padding: 12px; border-radius: 25px; border: none;
+    font-weight: 700; cursor: pointer; margin-bottom: 10px;
+    transition: transform 0.1s;
+}
+.auth-btn-primary { background: var(--primary); color: var(--bg-color); }
+.auth-btn-primary:hover { transform: scale(1.02); }
+.auth-btn-secondary { background: transparent; color: var(--text-secondary); border: 1px solid var(--text-secondary); }
+.auth-btn-secondary:hover { color: var(--text-primary); border-color: var(--text-primary); }
+.auth-switch-text { margin-top: 15px; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+.auth-switch-text:hover { text-decoration: underline; }
+.user-profile-btn {
+    cursor: pointer; color: var(--text-secondary); margin-right: 15px;
+    display: flex; align-items: center; gap: 5px;
+}
+.user-profile-btn:hover { color: var(--text-primary); }
+.user-profile-name { font-size: 14px; font-weight: 600; }
+
+/* User Dropdown Menu */
+.user-menu-container {
+    position: relative;
+}
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 200px;
+    background-color: var(--control-bg);
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    padding: 5px;
+    display: none;
+    z-index: 1000;
+    margin-top: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.user-dropdown.show { display: block; animation: fadeIn 0.2s ease; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.user-dropdown-item {
+    padding: 12px 15px; cursor: pointer; border-radius: 4px; font-size: 14px;
+    color: var(--text-secondary); transition: all 0.2s; display: flex; align-items: center; gap: 12px;
+}
+.user-dropdown-item:hover { background-color: rgba(255,255,255,0.1); color: var(--text-primary); }
+.user-dropdown-item svg { width: 18px; height: 18px; }
+.user-dropdown-separator { height: 1px; background-color: rgba(255,255,255,0.1); margin: 5px 0; }
+.user-dropdown-item.danger { color: #ff453a; }
+.user-dropdown-item.danger:hover { background-color: rgba(255, 69, 58, 0.15); }
+
+/* Account Settings Modal */
+.account-avatar-container {
+    display: flex; flex-direction: column; align-items: center; gap: 15px; margin-bottom: 20px;
+}
+.account-avatar-wrapper {
+    width: 100px; height: 100px; border-radius: 50%; overflow: hidden;
+    position: relative; cursor: pointer; border: 3px solid var(--control-bg);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.account-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+.account-avatar-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;
+}
+.account-avatar-wrapper:hover .account-avatar-overlay { opacity: 1; }
+.account-avatar-overlay svg { fill: #fff; width: 24px; height: 24px; }
+.account-section-title { font-size: 14px; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+.account-form-group { margin-bottom: 15px; }
+.account-form-group label { display: block; font-size: 12px; margin-bottom: 5px; color: var(--text-secondary); }
+.account-bio-input {
+    width: 100%; background: rgba(255,255,255,0.05); border: 1px solid transparent; border-radius: 4px;
+    color: #fff; padding: 10px; font-size: 13px; resize: vertical; min-height: 60px; outline: none; margin-bottom: 15px;
+}
+.account-bio-input:focus { background: rgba(255,255,255,0.1); border-color: var(--primary); }
+.account-stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;
+}
+.account-stat-item {
+    background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center;
+}
+.account-stat-value { font-size: 18px; font-weight: 700; color: var(--primary); display: block; }
+.account-stat-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; margin-top: 4px; display: block; }
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: none;
+}
+.toast {
+    background-color: var(--control-bg);
+    color: var(--text-primary);
+    padding: 12px 24px;
+    border-radius: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: auto;
+    border: 1px solid rgba(255,255,255,0.1);
+    text-align: center;
+    max-width: 90vw;
+}
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (min-width: 1024px) {
+    .header { display: flex; } /* Przywracamy header na desktopie dla przycisku wylogowania, ale ukrywamy logo */
+    .header { display: flex; align-items: center; } /* Przywracamy header na desktopie i centrujemy elementy */
+    .header > span { display: none; } /* Ukryj logo Bubify w headerze na desktopie (jest w sidebarze) */
+    .header { 
+        position: absolute; top: 0; right: 0; width: auto; 
+        background: transparent; padding: 39px 39px 20px; z-index: 10;
+    }
+    .user-dropdown {
+        left: auto;
+        right: 0; /* Na desktopie menu rozwija się do prawej krawędzi */
+    }
+}
+
 @media (min-width: 800px) {
     .song-list {
         padding: 0 10px 20px 10px;
@@ -646,7 +802,6 @@ body.add-to-playlist-open .add-to-playlist-content {
     }
 
     /* Ukrycie elementów mobilnych */
-    .header { display: none; }
     .queue-btn { display: none; } /* Kolejka/Playlista jest zawsze widoczna */
 
     /* Sidebar (Lista Playlist) */
@@ -666,6 +821,7 @@ body.add-to-playlist-open .add-to-playlist-content {
         display: block;
         font-family: 'Pacifico', cursive;
         font-size: 28px;
+        font-size: 34px;
         padding: 0 15px 20px;
         text-align: center;
     }
@@ -712,6 +868,7 @@ body.add-to-playlist-open .add-to-playlist-content {
     }
     .search-container {
         padding: 20px 30px 10px;
+        padding: 20px 160px 10px 30px;
         background-color: rgba(32, 32, 32, 0.8); /* Dopasowanie do górnej części gradientu */
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
@@ -799,7 +956,7 @@ body.add-to-playlist-open .add-to-playlist-content {
     .control-btn:hover svg { fill: rgb(7, 7, 7)000; }
     .control-btn:hover .icon-heart-empty { fill: none; stroke: #fff; }
     .play-btn { width: 32px; height: 32px; background: var(--primary); border-radius: 50%; transform: scale(1); }
-    .play-btn:hover { background: #1ed760; transform: scale(1.05); } /* Fix: Nadpisuje dziedziczone style hover */
+    .play-btn:hover { background: rgb(156, 25, 25); transform: scale(1.05); } /* Fix: Nadpisuje dziedziczone style hover */
     .play-btn svg { fill: var(--bg-color); width: 16px; height: 16px; }
     
     .progress-container {
@@ -819,8 +976,28 @@ body.add-to-playlist-open .add-to-playlist-content {
 </head>
 <body>
 <div class="header">
+    <div class="user-menu-container">
+        <div class="user-profile-btn" id="user-profile-btn" title="Profil">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span class="user-profile-name" id="user-profile-name">Gość</span>
+        </div>
+        <div class="user-dropdown" id="user-dropdown">
+            <div class="user-dropdown-item" id="user-dropdown-account">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                Konto
+            </div>
+            <div class="user-dropdown-item" id="user-dropdown-theme">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                Zmień motyw
+            </div>
+            <div class="user-dropdown-separator"></div>
+            <div class="user-dropdown-item danger" id="user-dropdown-logout">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Wyloguj
+            </div>
+        </div>
+    </div>
     <span>Bubify</span>
-    <div class="theme-switcher" id="theme-switcher"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></div>
 </div>
 <div class="now-playing">
     <div class="now-playing-left">
@@ -954,6 +1131,68 @@ body.add-to-playlist-open .add-to-playlist-content {
     </div>
 </div>
 
+<div class="modal-overlay" id="account-settings-modal">
+    <div class="modal-content">
+        <h3>Ustawienia konta</h3>
+        
+        <div class="account-avatar-container">
+            <div class="account-avatar-wrapper" id="account-avatar-wrapper">
+                <img id="account-avatar-img" src="https://placehold.co/100x100/333/999?text=User" alt="Avatar">
+                <div class="account-avatar-overlay">
+                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                </div>
+            </div>
+            <input type="file" id="account-avatar-input" accept="image/*" style="display:none">
+            <div style="font-size: 18px; font-weight: 600;" id="account-username-display">Nazwa</div>
+        </div>
+
+        <div class="account-stats-grid">
+            <div class="account-stat-item">
+                <span class="account-stat-value" id="stat-plays">0</span>
+                <span class="account-stat-label">Odtworzeń</span>
+            </div>
+            <div class="account-stat-item">
+                <span class="account-stat-value" id="stat-playlists">0</span>
+                <span class="account-stat-label">Playlisty</span>
+            </div>
+            <div class="account-stat-item">
+                <span class="account-stat-value" id="stat-joined">-</span>
+                <span class="account-stat-label">Dołączył</span>
+            </div>
+        </div>
+
+        <div class="account-section-title">O mnie</div>
+        <textarea class="account-bio-input" id="account-bio-input" placeholder="Napisz coś o sobie..."></textarea>
+
+        <div class="account-section-title">Zmiana hasła</div>
+        <div class="account-form-group">
+            <input type="password" id="account-old-password" class="auth-input" placeholder="Stare hasło">
+            <input type="password" id="account-new-password" class="auth-input" placeholder="Nowe hasło">
+        </div>
+
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-cancel" id="account-modal-cancel-btn">Anuluj</button>
+            <button class="modal-btn modal-btn-save" id="account-modal-save-btn">Zapisz zmiany</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<div class="auth-view" id="auth-view">
+    <div class="auth-container">
+        <div class="auth-logo">Bubify</div>
+        <h3 id="auth-title" style="margin-bottom: 20px;">Zaloguj się</h3>
+        <input type="text" id="auth-username" class="auth-input" placeholder="Nazwa użytkownika">
+        <input type="password" id="auth-password" class="auth-input" placeholder="Hasło">
+        <button class="auth-btn auth-btn-primary" id="auth-submit-btn">Zaloguj</button>
+        <div class="auth-switch-text" id="auth-switch-mode">Nie masz konta? Zarejestruj się</div>
+        <div style="margin-top: 20px; font-size: 11px; color: #666;">
+            Dane są zapisywane tylko w tej przeglądarce.
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // --- Poprawka na wysokość 100vh na urządzeniach mobilnych (np. iOS Safari) ---
@@ -980,7 +1219,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const songListEl = document.getElementById('song-list');
     const queueBtn = document.querySelector('.queue-btn');
     const body = document.body;
-    const themeSwitcher = document.getElementById('theme-switcher');
     const volumeSlider = document.getElementById('volume-slider');
     const albumCover = document.querySelector('.album-cover');
     const progressBar = document.querySelector('.progress-bar');
@@ -1010,6 +1248,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const editModalCoverWrapper = document.getElementById('edit-modal-cover-wrapper');
     const editModalCancelBtn = document.getElementById('edit-modal-cancel-btn');
     const editModalSaveBtn = document.getElementById('edit-modal-save-btn');
+    
+    const authView = document.getElementById('auth-view');
+    const authUsernameInput = document.getElementById('auth-username');
+    const authPasswordInput = document.getElementById('auth-password');
+    const authSubmitBtn = document.getElementById('auth-submit-btn');
+    const authSwitchMode = document.getElementById('auth-switch-mode');
+    const authTitle = document.getElementById('auth-title');
+    const userProfileBtn = document.getElementById('user-profile-btn');
+    const userProfileName = document.getElementById('user-profile-name');
+    const userDropdown = document.getElementById('user-dropdown');
+    const userDropdownAccount = document.getElementById('user-dropdown-account');
+    const userDropdownTheme = document.getElementById('user-dropdown-theme');
+    const userDropdownLogout = document.getElementById('user-dropdown-logout');
+    
+    const accountSettingsModal = document.getElementById('account-settings-modal');
+    const accountAvatarWrapper = document.getElementById('account-avatar-wrapper');
+    const accountAvatarImg = document.getElementById('account-avatar-img');
+    const accountAvatarInput = document.getElementById('account-avatar-input');
+    const accountUsernameDisplay = document.getElementById('account-username-display');
+    const accountBioInput = document.getElementById('account-bio-input');
+    const statPlays = document.getElementById('stat-plays');
+    const statPlaylists = document.getElementById('stat-playlists');
+    const statJoined = document.getElementById('stat-joined');
+    const accountOldPassword = document.getElementById('account-old-password');
+    const accountNewPassword = document.getElementById('account-new-password');
+    const accountModalCancelBtn = document.getElementById('account-modal-cancel-btn');
+    const accountModalSaveBtn = document.getElementById('account-modal-save-btn');
 
     let isPlaying = false;
     let currentSongIndex = 0;
@@ -1018,6 +1283,30 @@ document.addEventListener('DOMContentLoaded', function() {
     let animationFrameId = null;
     let repeatMode = 0; // 0: none, 1: all, 2: one
     let songForAction = null; // Przechowuje utwór do operacji (dodaj/usuń)
+    let currentUser = null; // Aktualnie zalogowany użytkownik
+    let isRegisterMode = false;
+    let tempAvatarDataUrl = null;
+
+    // --- Toast Notification System ---
+    function showToast(message) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        // Wymuś przeliczenie stylów (reflow) dla animacji
+        void toast.offsetWidth;
+
+        toast.classList.add('show');
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (container.contains(toast)) container.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
 
     // --- Nowa struktura danych dla playlist ---
     let allSongs = []; // Główna lista wszystkich obiektów piosenek
@@ -1025,6 +1314,233 @@ document.addEventListener('DOMContentLoaded', function() {
     let playlistMetadata = {}; // { "nazwa": { cover: "base64..." } }
     let activePlaylistName = 'Wszystkie utwory';
     let songs = []; // Widok piosenek dla aktywnej playlisty
+
+    // --- System Logowania (Local Storage) ---
+    
+    // Inicjalizacja domyślnego konta Administratora
+    const initUsers = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+    if (!initUsers['Admin']) {
+        initUsers['Admin'] = { password: 'rabarbar' };
+        localStorage.setItem('bubify_users', JSON.stringify(initUsers));
+    }
+
+    function getStorageKey(key) {
+        if (!currentUser) return key; // Fallback
+        return `${currentUser}_${key}`;
+    }
+
+    function checkLogin() {
+        const savedUser = localStorage.getItem('bubify_current_user');
+        if (savedUser) {
+            loginUser(savedUser);
+        } else {
+            authView.classList.remove('hidden');
+        }
+    }
+
+    function loginUser(username) {
+        currentUser = username;
+        localStorage.setItem('bubify_current_user', username);
+        userProfileName.textContent = username;
+        authView.classList.add('hidden');
+
+        // Załaduj awatar użytkownika
+        const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+        if (users[username] && users[username].avatar) {
+            // Aktualizacja ikony w headerze (mała sztuczka - podmieniamy SVG na IMG jeśli jest awatar)
+            updateHeaderAvatar(users[username].avatar);
+        } else {
+            resetHeaderAvatar();
+        }
+        
+        // Załaduj dane użytkownika
+        loadPlaylists();
+        applyTheme(localStorage.getItem(getStorageKey('musicPlayerTheme')));
+        
+        // Pobierz utwory (jeśli jeszcze nie pobrane) i odśwież widok
+        if (allSongs.length === 0) {
+            fetchSongs();
+        } else {
+            // Jeśli utwory już są, tylko odśwież playlisty
+            const lastActivePlaylist = localStorage.getItem(getStorageKey('bubify_lastActivePlaylist')) || 'Wszystkie utwory';
+            setActivePlaylist(playlists[lastActivePlaylist] ? lastActivePlaylist : 'Wszystkie utwory');
+        }
+    }
+
+    function updateHeaderAvatar(src) {
+        const profileBtn = document.getElementById('user-profile-btn');
+        // Usuń istniejące SVG jeśli jest
+        const existingSvg = profileBtn.querySelector('svg');
+        const existingImg = profileBtn.querySelector('img');
+        
+        if (existingSvg) existingSvg.remove();
+        if (existingImg) existingImg.remove();
+
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.cssText = "width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: 5px;";
+        profileBtn.insertBefore(img, profileBtn.firstChild);
+    }
+
+    function resetHeaderAvatar() {
+        // Przywraca domyślną ikonę SVG (można zaimplementować przeładowanie strony przy wylogowaniu, co i tak robimy)
+    }
+
+    function logoutUser() {
+        if (confirm('Czy na pewno chcesz się wylogować?')) {
+            currentUser = null;
+            localStorage.removeItem('bubify_current_user');
+            location.reload(); // Najprostszy sposób na wyczyszczenie stanu aplikacji
+        }
+    }
+
+    authSubmitBtn.addEventListener('click', () => {
+        const username = authUsernameInput.value.trim();
+        const password = authPasswordInput.value.trim();
+
+        if (!username || !password) return showToast('Wypełnij wszystkie pola');
+
+        const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+
+        if (isRegisterMode) {
+            if (users[username]) {
+                showToast('Taki użytkownik już istnieje!');
+            } else {
+                users[username] = { password: password }; // W prawdziwej aplikacji hasło powinno być hashowane!
+                users[username] = { 
+                    password: password,
+                    joinDate: new Date().toLocaleDateString(),
+                    plays: 0,
+                    bio: ''
+                }; 
+                localStorage.setItem('bubify_users', JSON.stringify(users));
+                showToast('Konto utworzone! Możesz się zalogować.');
+                toggleAuthMode();
+            }
+        } else {
+            if (users[username] && users[username].password === password) {
+                loginUser(username);
+            } else {
+                showToast('Błędna nazwa użytkownika lub hasło');
+            }
+        }
+    });
+
+    function toggleAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        authTitle.textContent = isRegisterMode ? 'Zarejestruj się' : 'Zaloguj się';
+        authSubmitBtn.textContent = isRegisterMode ? 'Utwórz konto' : 'Zaloguj';
+        authSwitchMode.textContent = isRegisterMode ? 'Masz już konto? Zaloguj się' : 'Nie masz konta? Zarejestruj się';
+    }
+
+    authSwitchMode.addEventListener('click', toggleAuthMode);
+    
+    // Obsługa menu użytkownika
+    userProfileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown.classList.toggle('show');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!userDropdown.contains(e.target) && !userProfileBtn.contains(e.target)) {
+            userDropdown.classList.remove('show');
+        }
+    });
+
+    userDropdownLogout.addEventListener('click', logoutUser);
+    
+    // --- Obsługa Ustawień Konta ---
+    userDropdownAccount.addEventListener('click', () => {
+        showToast('Ustawienia konta - wkrótce!');
+        userDropdown.classList.remove('show');
+        openAccountSettings();
+    });
+
+    function openAccountSettings() {
+        const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+        const userData = users[currentUser] || {};
+
+        accountUsernameDisplay.textContent = currentUser;
+        accountOldPassword.value = '';
+        accountNewPassword.value = '';
+        
+        // Wczytaj statystyki i bio
+        accountBioInput.value = userData.bio || '';
+        statPlays.textContent = userData.plays || 0;
+        statJoined.textContent = userData.joinDate || 'Nieznana';
+        
+        // Policz playlisty (tylko własne)
+        const userPlaylistsCount = Object.keys(playlists).filter(k => k !== 'Wszystkie utwory' && k !== 'Radio' && k !== 'Ulubione').length;
+        statPlaylists.textContent = userPlaylistsCount;
+
+        tempAvatarDataUrl = null;
+
+        if (userData.avatar) {
+            accountAvatarImg.src = userData.avatar;
+        } else {
+            accountAvatarImg.src = `https://placehold.co/100x100/333/999?text=${currentUser.charAt(0).toUpperCase()}`;
+        }
+
+        accountSettingsModal.classList.add('open');
+    }
+
+    accountModalCancelBtn.addEventListener('click', () => {
+        accountSettingsModal.classList.remove('open');
+    });
+
+    accountAvatarWrapper.addEventListener('click', () => accountAvatarInput.click());
+
+    accountAvatarInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const maxSize = 300;
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height) { if (width > maxSize) { height *= maxSize / width; width = maxSize; } }
+                    else { if (height > maxSize) { width *= maxSize / height; height = maxSize; } }
+                    canvas.width = width; canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    tempAvatarDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    accountAvatarImg.src = tempAvatarDataUrl;
+                }
+                img.src = ev.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    accountModalSaveBtn.addEventListener('click', () => {
+        const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+        const oldPass = accountOldPassword.value;
+        const newPass = accountNewPassword.value;
+
+        // Zmiana hasła
+        if (newPass) {
+            if (users[currentUser].password !== oldPass) {
+                return showToast('Stare hasło jest nieprawidłowe!');
+            }
+            users[currentUser].password = newPass;
+            showToast('Hasło zostało zmienione.');
+        }
+
+        // Zmiana awatara
+        if (tempAvatarDataUrl) {
+            users[currentUser].avatar = tempAvatarDataUrl;
+            updateHeaderAvatar(tempAvatarDataUrl);
+        }
+
+        // Zapisz Bio
+        users[currentUser].bio = accountBioInput.value.trim();
+
+        localStorage.setItem('bubify_users', JSON.stringify(users));
+        accountSettingsModal.classList.remove('open');
+    });
 
     // --- Przełączanie i zapamiętywanie motywu ---
     function applyTheme(theme) {
@@ -1036,13 +1552,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    themeSwitcher.addEventListener('click', () => {
+    userDropdownTheme.addEventListener('click', () => {
         body.classList.toggle('theme-vampire');
         const newTheme = body.classList.contains('theme-vampire') ? 'vampire' : 'default';
-        localStorage.setItem('musicPlayerTheme', newTheme);
+        localStorage.setItem(getStorageKey('musicPlayerTheme'), newTheme);
     });
-    // Zastosuj motyw zapisany w pamięci przy starcie aplikacji
-    applyTheme(localStorage.getItem('musicPlayerTheme'));
 
     function formatTime(seconds) {
         if (!Number.isFinite(seconds)) return 'LIVE';
@@ -1056,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Zarządzanie playlistami ---
     function loadPlaylists() {
-        const storedPlaylists = localStorage.getItem('bubify_playlists');
+        const storedPlaylists = localStorage.getItem(getStorageKey('bubify_playlists'));
         if (storedPlaylists) {
             playlists = JSON.parse(storedPlaylists);
             if (!playlists['Radio']) playlists['Radio'] = [];
@@ -1064,7 +1578,7 @@ document.addEventListener('DOMContentLoaded', function() {
             playlists = { 'Ulubione': [], 'Radio': [] };
         }
         
-        const storedMetadata = localStorage.getItem('bubify_playlist_metadata');
+        const storedMetadata = localStorage.getItem(getStorageKey('bubify_playlist_metadata'));
         if (storedMetadata) {
             playlistMetadata = JSON.parse(storedMetadata);
         } else {
@@ -1079,11 +1593,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const playlistsToSave = { ...playlists };
         // Nie zapisujemy auto-generowanej playlisty
         delete playlistsToSave['Wszystkie utwory'];
-        localStorage.setItem('bubify_playlists', JSON.stringify(playlistsToSave));
+        localStorage.setItem(getStorageKey('bubify_playlists'), JSON.stringify(playlistsToSave));
     }
 
     function savePlaylistMetadata() {
-        localStorage.setItem('bubify_playlist_metadata', JSON.stringify(playlistMetadata));
+        localStorage.setItem(getStorageKey('bubify_playlist_metadata'), JSON.stringify(playlistMetadata));
     }
 
     function togglePlaylistManager() {
@@ -1095,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (name && name.trim() !== '') {
             const trimmedName = name.trim();
             if (playlists[trimmedName]) {
-                alert('Playlista o tej nazwie już istnieje!');
+                showToast('Playlista o tej nazwie już istnieje!');
             } else {
                 playlists[trimmedName] = [];
                 savePlaylists();
@@ -1135,6 +1649,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const nameSpan = document.createElement('span');
             nameSpan.textContent = name;
+            if (name === 'Radio') {
+                const liveBadge = document.createElement('span');
+                liveBadge.textContent = 'LIVE';
+                liveBadge.style.cssText = 'background-color: #ff453a; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; letter-spacing: 0.5px;';
+                nameSpan.appendChild(liveBadge);
+            }
             nameSpan.style.flexGrow = '1'; // Wypchnij przycisk usuwania na prawo
             li.appendChild(nameSpan);
 
@@ -1211,7 +1731,7 @@ document.addEventListener('DOMContentLoaded', function() {
             playlists[playlistName].push(songUrl);
             savePlaylists();
         }
-        // Można dodać powiadomienie "Dodano!"
+        showToast(`Dodano do playlisty "${playlistName}"`);
         closeAddToPlaylistView();
     }
 
@@ -1228,8 +1748,8 @@ document.addEventListener('DOMContentLoaded', function() {
         closeAddToPlaylistView();
     }
 
-    // Pobranie mp3 z repozytorium GitHub
-    loadPlaylists();
+    // Funkcja pobierająca utwory (wydzielona, aby wywołać po zalogowaniu)
+    function fetchSongs() {
     fetch('https://api.github.com/repos/bearsleeping/Muzyka/contents/')
       .then(res => res.json())
       .then(files => {
@@ -1256,15 +1776,57 @@ document.addEventListener('DOMContentLoaded', function() {
                   title: 'RMF FM',
                   artist: 'Radio Live',
                   duration: 'LIVE',
-                  cover: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/RMF_FM_logo.svg/600px-RMF_FM_logo.svg.png',
+                  cover: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/RMF_FM_logo.svg/2048px-RMF_FM_logo.svg.png',
                   audio: 'https://rs101-krk.rmfstream.pl/rmf_fm'
               },
               {
                   title: 'Radio ZET',
                   artist: 'Radio Live',
                   duration: 'LIVE',
-                  cover: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Radio_ZET_logo.svg/600px-Radio_ZET_logo.svg.png',
+                  cover: 'https://uk.radio.net/175/radiozetnarower.png?version=ee97e7de3eb06f56d34af61f4765a1a81b52f180',
                   audio: 'https://n-6-6.dcs.redcdn.pl/sc/o2/Eurozet/live/audio.livx'
+              }
+            , {
+                  title: 'Eska',
+                  artist: 'Radio Live',
+                  duration: 'LIVE',
+                  cover: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQP4UqE6zwVmNVmDC7CM4U7oiZfBmKm4SpFuQ&s',
+                  audio: 'https://waw.ic.smcdn.pl/2180-2.aac'
+              }
+            , {
+                  title: 'Eska 2',
+                  artist: 'Radio Live',
+                  duration: 'LIVE',
+                  cover: 'https://radiofm-online.com/files/polskie-radio/styles/180/public/logo/eska2.jpg?itok=k7l0r8DE',
+                  audio: 'https://waw.ic.smcdn.pl/1380-1.aac'
+              },
+            {
+                  title: 'Radio Olsztyn',
+                  artist: 'Radio Live',
+                  duration: 'LIVE',
+                  cover: 'https://radiofm-online.com/files/polskie-radio/styles/media/public/logo/radio-olsztyn.jpg',
+                  audio: 'https://rostr1.radioolsztyn.pl:8843/RO'
+              },
+            {
+                  title: 'RMF Classic',
+                  artist: 'Radio Live',
+                  duration: 'LIVE',
+                  cover: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/RMF_CLASSIC_-_logotyp.png/1200px-RMF_CLASSIC_-_logotyp.png',
+                  audio: 'https://rs101-krk.rmfstream.pl/rmf_classic'
+              },
+            {
+                  title: 'RMF MAXXX',
+                  artist: 'Radio Live',
+                  duration: 'LIVE',
+                  cover: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/RMF_MAXX.png/1200px-RMF_MAXX.png?20220927141656 2x',
+                  audio: 'https://rs203-krk.rmfstream.pl/rmf_maxxx_wlc'
+              },
+            {
+                  title: 'PR Radio Katowice',
+                  artist: 'Radio Live',
+                  duration: 'LIVE',
+                  cover: 'https://images.seeklogo.com/logo-png/19/1/polskie-radio-katowice-logo-png_seeklogo-194811.png',
+                  audio: 'https://stream4.nadaje.com:9213/radiokatowice'
               }
           ];
 
@@ -1277,13 +1839,14 @@ document.addEventListener('DOMContentLoaded', function() {
           playlists['Wszystkie utwory'] = allSongs.filter(s => s.duration !== 'LIVE').map(s => s.audio);
 
           // Ustaw aktywną playlistę (ostatnio używaną lub domyślną)
-          const lastActivePlaylist = localStorage.getItem('bubify_lastActivePlaylist') || 'Wszystkie utwory';
+          const lastActivePlaylist = localStorage.getItem(getStorageKey('bubify_lastActivePlaylist')) || 'Wszystkie utwory';
           setActivePlaylist(playlists[lastActivePlaylist] ? lastActivePlaylist : 'Wszystkie utwory');
 
           fetchAlbumCovers(); // Pobierz okładki w tle
       })
       .catch(err => console.error("Błąd podczas pobierania listy utworów:", err));
-
+    }
+    
     // --- Obsługa okładek playlist ---
     function resizeAndSaveCover(file) {
         const reader = new FileReader();
@@ -1381,7 +1944,7 @@ document.addEventListener('DOMContentLoaded', function() {
             audio.src = '';
             if (isPlaying) pauseSong();
         }
-        localStorage.setItem('bubify_lastActivePlaylist', name);
+        localStorage.setItem(getStorageKey('bubify_lastActivePlaylist'), name);
     }
 
     function populatePlaylist() {
@@ -1517,6 +2080,16 @@ document.addEventListener('DOMContentLoaded', function() {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = requestAnimationFrame(rotateCover);
         audio.play();
+        
+        // Zwiększ licznik odtworzeń dla użytkownika
+        if (currentUser) {
+            const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+            if (users[currentUser]) {
+                users[currentUser].plays = (users[currentUser].plays || 0) + 1;
+                localStorage.setItem('bubify_users', JSON.stringify(users));
+            }
+        }
+
         if ('mediaSession' in navigator) {
             navigator.mediaSession.playbackState = "playing";
         }
@@ -1548,7 +2121,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fetchAlbumCovers() {
         allSongs.forEach((song, index) => {
-            if (song.artist === 'Nieznany artysta') return;
+            if (song.artist === 'Nieznany artysta' || song.artist === 'Radio Live') return;
 
             const searchTerm = encodeURIComponent(`${song.artist} ${song.title}`);
             const url = `https://itunes.apple.com/search?term=${searchTerm}&entity=song&limit=1`;
@@ -1567,12 +2140,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 navigator.mediaSession.metadata.artwork = [
                                     { src: coverUrl, sizes: '96x96', type: 'image/jpeg' },
                                     { src: coverUrl, sizes: '512x512', type: 'image/jpeg' },
-                                ];
+                                ]; // Aktualizuje grafikę dla aktualnie odtwarzanego utworu w Media Session
                             }
-                        }
-                        const songItem = songListEl.querySelector(`.song-item:nth-child(${index + 1})`);
-                        if (songItem) {
-                            songItem.querySelector('.song-thumbnail img').src = coverUrl;
                         }
                     }
                 })
@@ -1581,6 +2150,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function toggleFavorite(songToToggle) {
+        if (songToToggle.duration === 'LIVE') {
+            showToast('Nie można dodać stacji radiowej do Ulubionych.');
+            return;
+        }
+
         const favoritePlaylist = playlists['Ulubione'];
         const songUrl = songToToggle.audio;
         const songIndexInFavorites = favoritePlaylist.indexOf(songUrl);
@@ -1894,11 +2468,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     editModalSaveBtn.addEventListener('click', () => {
         const newName = editModalNameInput.value.trim();
-        if (!newName) return alert("Nazwa nie może być pusta");
+        if (!newName) return showToast("Nazwa nie może być pusta");
         
         // Zmiana nazwy
         if (newName !== activePlaylistName && activePlaylistName !== 'Ulubione' && activePlaylistName !== 'Radio') {
-            if (playlists[newName]) return alert("Playlista o tej nazwie już istnieje");
+            if (playlists[newName]) return showToast("Playlista o tej nazwie już istnieje");
             
             // Kopiowanie danych
             playlists[newName] = playlists[activePlaylistName];
@@ -2021,12 +2595,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const songToAdd = songs[dragStartIndex];
         if (!songToAdd) return;
 
+        if (songToAdd.duration === 'LIVE' && (targetPlaylistName === 'Ulubione' || targetPlaylistName === 'Wszystkie utwory')) {
+            showToast('Nie można dodawać stacji radiowych do playlisty "' + targetPlaylistName + '".');
+            return;
+        }
+
         const songUrl = songToAdd.audio;
         
         if (targetPlaylistName === 'Wszystkie utwory' || !playlists[targetPlaylistName]) return;
 
         if (playlists[targetPlaylistName].includes(songUrl)) {
-            alert(`Utwór "${songToAdd.title}" znajduje się już na playliście "${targetPlaylistName}".`);
+            showToast(`Utwór "${songToAdd.title}" znajduje się już na playliście "${targetPlaylistName}".`);
             return;
         }
 
@@ -2088,6 +2667,9 @@ document.addEventListener('DOMContentLoaded', function() {
         navigator.mediaSession.setActionHandler('previoustrack', prevSong);
         navigator.mediaSession.setActionHandler('nexttrack', nextSong);
     }
+
+    // Sprawdź status logowania na starcie
+    checkLogin();
 
 });
 </script>
