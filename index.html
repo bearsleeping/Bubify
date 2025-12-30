@@ -1358,7 +1358,7 @@ document.addEventListener('DOMContentLoaded', function() {
         get TOKEN() { 
             const prefix = 'ghp_';
             // Poniżej wklej resztę NOWEGO tokena (wszystko co jest po "ghp_"):
-            const secret = 'TU_WKLEJ_NOWY_TOKEN'; // Np. 'AbCdEf123456...' (bez ghp_)
+            const secret = '06hROxaIIuU2lzUhZvg1Jg1gqMwGnA3nkkvI'; // WAŻNE: Wklej tutaj resztę nowego tokena (bez "ghp_")
             return prefix + secret; 
         },
         OWNER: 'bearsleeping', // <-- UPEWNIJ SIĘ, ŻE TO TWÓJ NICK NA GITHUB
@@ -1521,7 +1521,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicjalizacja domyślnego konta Administratora
     const initUsers = JSON.parse(localStorage.getItem('bubify_users') || '{}');
     if (!initUsers['Admin']) {
-        initUsers['Admin'] = { password: '000' };
+        initUsers['Admin'] = { password: '0000' }; // Ujednolicenie hasła startowego
         localStorage.setItem('bubify_users', JSON.stringify(initUsers));
     }
 
