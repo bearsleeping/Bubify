@@ -19,6 +19,7 @@
 <style>
 :root {
     --bg-color: #121212;
+    --primary: #1a4ef8;
     --primary: #ffffff;
     --primary-hover: #e0e0e0;
     --text-primary: #ffffff;
@@ -196,10 +197,11 @@ body {
 .favorite-control-btn.is-favorite .icon-heart-filled { display: block; fill: var(--primary); }
 .control-btn .icon-heart-empty { fill: none; }
 .play-btn { width:70px; height:70px; background-color: var(--primary); transition: background-color 0.3s ease, transform 0.1s ease-out; }
+.play-btn:hover { background-color: #1ed760; } /* Fix: Zapobiega znikaniu tła i lekko rozjaśnia (Spotify style) */
+.play-btn:active { transform: scale(0.9); }
 #favorite-player-btn { display: none; }
-.play-btn svg { fill: var(--bg-color); }
+.play-btn svg { fill: var(--bg-color); width: 32px; height: 32px; }
 .play-btn .icon-pause { display: none; } 
-.play-btn:hover { background-color: var(--primary-hover); }
 .playing .play-btn .icon-play {
     display: none;
 }
@@ -291,6 +293,7 @@ body {
 .song-item-artist { font-size:13px; color:var(--text-secondary); }
 .song-item.active .song-item-title {
     color: var(--primary);
+    color: #1db954; /* Spotify Green dla aktywnego utworu */
 }
 .song-item-duration { font-size:13px; color:var(--text-secondary); margin-left: 15px; }
 .song-item-actions {
@@ -324,6 +327,17 @@ body {
     transition: fill 0.2s;
 }
 .more-options-btn:hover svg { fill: var(--text-primary); }
+.delete-song-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.delete-song-btn svg { fill: var(--text-secondary); transition: fill 0.2s; }
+.delete-song-btn:hover svg { fill: #ff453a; }
 .player-footer::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius:10px; }
 .player-footer::-webkit-scrollbar-thumb { background:var(--text-secondary); border-radius:10px; }
 @media (max-height:700px) { .album-cover { width:220px; height:220px; } }
@@ -465,33 +479,54 @@ body.playlist-manager-open .playlist-manager-view {
     color: var(--primary);
     font-weight: 600;
 }
+.playlist-manager-item.drag-over-playlist {
+    background-color: rgba(255, 255, 255, 0.15);
+    border: 1px dashed var(--text-secondary);
+}
 
-/* Add to Playlist View */
+/* Add to Playlist View - Popup Style */
 .add-to-playlist-view {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--bg-color);
-    z-index: 120; /* Above other views */
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.7); /* Przyciemnione tło */
+    z-index: 200;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
 }
 body.add-to-playlist-open .add-to-playlist-view {
-    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+.add-to-playlist-content {
+    background-color: var(--control-bg);
+    width: 90%;
+    max-width: 320px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh;
+    transform: scale(0.95);
+    transition: transform 0.2s ease;
+}
+body.add-to-playlist-open .add-to-playlist-content {
+    transform: scale(1);
 }
 .add-to-playlist-header {
     padding: 15px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     flex-shrink: 0;
-    border-bottom: 1px solid var(--control-bg);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    background-color: rgba(255,255,255,0.03);
 }
 .close-add-to-playlist-btn {
     cursor: pointer;
@@ -504,15 +539,22 @@ body.add-to-playlist-open .add-to-playlist-view {
 .close-add-to-playlist-btn:hover svg { fill: var(--text-primary); }
 .add-to-playlist-list {
     list-style: none;
-    padding: 10px;
+    padding: 5px 0;
     overflow-y: auto;
 }
 .add-to-playlist-item {
-    padding: 15px 20px;
-    font-size: 18px;
-    border-bottom: 1px solid var(--control-bg);
+    padding: 12px 20px;
+    font-size: 15px;
+    border-bottom: none;
     cursor: pointer;
     transition: background-color 0.2s;
+    color: var(--text-primary);
+    opacity: 0;
+    animation: slideInItem 0.3s ease forwards;
+}
+@keyframes slideInItem {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 .add-to-playlist-item:hover { background-color: rgba(255,255,255,0.05); }
 .add-to-playlist-item.remove-item { color: #ff453a; }
@@ -571,6 +613,7 @@ body.add-to-playlist-open .add-to-playlist-view {
 .modal-btn-cancel { background: transparent; color: #fff; }
 .modal-btn-cancel:hover { text-decoration: underline; }
 .modal-btn-save { background: #fff; color: #000; }
+.modal-btn-save { background: var(--primary); color: var(--bg-color); }
 .modal-btn-save:hover { transform: scale(1.04); }
 .edit-playlist-btn {
     background: transparent; border: none; cursor: pointer;
@@ -753,11 +796,11 @@ body.add-to-playlist-open .add-to-playlist-view {
     .control-btn:hover { background: transparent; transform: scale(1.1); }
     .control-btn svg { width: 16px; height: 16px; fill: #b3b3b3; }
     .control-btn .icon-heart-empty { fill: none; stroke: #b3b3b3; }
-    .control-btn:hover svg { fill: #fff; }
+    .control-btn:hover svg { fill: rgb(7, 7, 7)000; }
     .control-btn:hover .icon-heart-empty { fill: none; stroke: #fff; }
-    .play-btn { width: 32px; height: 32px; background: #fff; border-radius: 50%; transform: scale(1); }
-    .play-btn:hover { background: #fff; transform: scale(1.05); }
-    .play-btn svg { fill: #000; }
+    .play-btn { width: 32px; height: 32px; background: var(--primary); border-radius: 50%; transform: scale(1); }
+    .play-btn:hover { background: #1ed760; transform: scale(1.05); } /* Fix: Nadpisuje dziedziczone style hover */
+    .play-btn svg { fill: var(--bg-color); width: 16px; height: 16px; }
     
     .progress-container {
         display: flex; align-items: center; width: 100%; margin-bottom: 5px; gap: 8px; flex-wrap: nowrap; order: 0;
@@ -880,6 +923,7 @@ body.add-to-playlist-open .add-to-playlist-view {
     </ul>
 </div>
 <div class="add-to-playlist-view">
+    <div class="add-to-playlist-content">
     <div class="add-to-playlist-header">
         <span id="add-to-playlist-title">Dodaj do...</span>
         <div class="close-add-to-playlist-btn">
@@ -888,6 +932,7 @@ body.add-to-playlist-open .add-to-playlist-view {
     </div>
     <ul class="add-to-playlist-list" id="add-to-playlist-list">
     </ul>
+    </div>
 </div>
 <div class="modal-overlay" id="edit-playlist-modal">
     <div class="modal-content">
@@ -1000,6 +1045,7 @@ document.addEventListener('DOMContentLoaded', function() {
     applyTheme(localStorage.getItem('musicPlayerTheme'));
 
     function formatTime(seconds) {
+        if (!Number.isFinite(seconds)) return 'LIVE';
         const minutes = Math.floor(seconds / 60);
         let secs = Math.floor(seconds % 60);
         if (secs < 10) {
@@ -1013,8 +1059,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const storedPlaylists = localStorage.getItem('bubify_playlists');
         if (storedPlaylists) {
             playlists = JSON.parse(storedPlaylists);
+            if (!playlists['Radio']) playlists['Radio'] = [];
         } else {
-            playlists = { 'Ulubione': [] };
+            playlists = { 'Ulubione': [], 'Radio': [] };
         }
         
         const storedMetadata = localStorage.getItem('bubify_playlist_metadata');
@@ -1094,7 +1141,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (name === activePlaylistName) li.classList.add('active');
 
             // Dodaj przycisk usuwania dla playlist, które można usunąć
-            if (name !== 'Wszystkie utwory' && name !== 'Ulubione') {
+            if (name !== 'Wszystkie utwory' && name !== 'Ulubione' && name !== 'Radio') {
                 const deleteBtn = document.createElement('button');
                 deleteBtn.classList.add('delete-playlist-btn');
                 deleteBtn.title = `Usuń playlistę "${name}"`;
@@ -1105,6 +1152,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 li.appendChild(deleteBtn);
             }
+            
+            // Dodaj obsługę upuszczania utworów na playlistę
+            addPlaylistDropListeners(li, name);
 
             li.addEventListener('click', () => {
                 setActivePlaylist(name);
@@ -1128,13 +1178,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function populateAddToPlaylistView() {
         addToPlaylistList.innerHTML = '';
+        let delayIndex = 0;
 
         // Opcja usunięcia, jeśli jesteśmy na customowej playliście
-        if (activePlaylistName !== 'Wszystkie utwory' && activePlaylistName !== 'Ulubione') {
+        if (activePlaylistName !== 'Wszystkie utwory' && activePlaylistName !== 'Ulubione' && activePlaylistName !== 'Radio') {
             const removeItem = document.createElement('li');
             removeItem.classList.add('add-to-playlist-item', 'remove-item');
             removeItem.textContent = `Usuń z playlisty "${activePlaylistName}"`;
             removeItem.addEventListener('click', removeSongFromCurrentPlaylist);
+            removeItem.style.animationDelay = `${delayIndex++ * 0.05}s`;
             addToPlaylistList.appendChild(removeItem);
         }
 
@@ -1146,6 +1198,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 li.classList.add('add-to-playlist-item');
                 li.textContent = name;
                 li.addEventListener('click', () => addSongToPlaylist(name));
+                li.style.animationDelay = `${delayIndex++ * 0.05}s`;
                 addToPlaylistList.appendChild(li);
             });
     }
@@ -1197,8 +1250,31 @@ document.addEventListener('DOMContentLoaded', function() {
                   };
               });
           
+          // Dodaj stacje radiowe
+          const radioStations = [
+              {
+                  title: 'RMF FM',
+                  artist: 'Radio Live',
+                  duration: 'LIVE',
+                  cover: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/RMF_FM_logo.svg/600px-RMF_FM_logo.svg.png',
+                  audio: 'https://rs101-krk.rmfstream.pl/rmf_fm'
+              },
+              {
+                  title: 'Radio ZET',
+                  artist: 'Radio Live',
+                  duration: 'LIVE',
+                  cover: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Radio_ZET_logo.svg/600px-Radio_ZET_logo.svg.png',
+                  audio: 'https://n-6-6.dcs.redcdn.pl/sc/o2/Eurozet/live/audio.livx'
+              }
+          ];
+
+          radioStations.forEach(station => {
+              allSongs.push(station);
+              if (!playlists['Radio'].includes(station.audio)) playlists['Radio'].push(station.audio);
+          });
+
           // Wypełnij playlistę "Wszystkie utwory"
-          playlists['Wszystkie utwory'] = allSongs.map(s => s.audio);
+          playlists['Wszystkie utwory'] = allSongs.filter(s => s.duration !== 'LIVE').map(s => s.audio);
 
           // Ustaw aktywną playlistę (ostatnio używaną lub domyślną)
           const lastActivePlaylist = localStorage.getItem('bubify_lastActivePlaylist') || 'Wszystkie utwory';
@@ -1274,7 +1350,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Pokaż/ukryj możliwość edycji okładki (tylko dla własnych playlist)
-        if (name !== 'Wszystkie utwory') {
+        if (name !== 'Wszystkie utwory' && name !== 'Radio') {
             playlistCoverOverlay.style.display = 'flex';
             playlistCoverOverlay.onclick = () => playlistCoverInput.click();
         } else {
@@ -1283,7 +1359,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Pokaż/ukryj przycisk edycji
-        if (name !== 'Wszystkie utwory') {
+        if (name !== 'Wszystkie utwory' && name !== 'Radio') {
             editPlaylistBtn.style.display = 'flex';
         } else {
             editPlaylistBtn.style.display = 'none';
@@ -1311,6 +1387,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function populatePlaylist() {
         songListEl.innerHTML = '';
         const favoriteUrls = new Set(playlists['Ulubione']);
+        const isCustomPlaylist = activePlaylistName !== 'Wszystkie utwory';
 
         songs.forEach((song, index) => {
             const li = document.createElement('li');
@@ -1318,6 +1395,21 @@ document.addEventListener('DOMContentLoaded', function() {
             li.setAttribute('draggable', 'true');
             li.dataset.index = index;
             const isFavorite = favoriteUrls.has(song.audio);
+
+            let actionButtonHtml;
+            if (isCustomPlaylist) {
+                actionButtonHtml = `
+                    <button class="delete-song-btn" title="Usuń z playlisty">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                `;
+            } else {
+                actionButtonHtml = `
+                    <button class="more-options-btn" title="Dodaj do playlisty">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                    </button>
+                `;
+            }
 
             li.innerHTML = `
                 <div class="song-number">${index + 1}</div>
@@ -1332,9 +1424,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <svg class="icon-heart-empty" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                         <svg class="icon-heart-filled" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                     </button>
-                    <button class="more-options-btn">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-                    </button>
+                    ${actionButtonHtml}
                 </div>
             `;
             li.querySelector('.song-item-info').addEventListener('click', () => {
@@ -1348,10 +1438,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.stopPropagation();
                 toggleFavorite(song);
             });
-            li.querySelector('.more-options-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                openAddToPlaylistView(song);
-            });
+            if (isCustomPlaylist) {
+                li.querySelector('.delete-song-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    removeSongFromPlaylist(index);
+                });
+            } else {
+                li.querySelector('.more-options-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openAddToPlaylistView(song);
+                });
+            }
             addDragAndDropListeners(li);
             songListEl.appendChild(li);
         });
@@ -1714,6 +1811,9 @@ document.addEventListener('DOMContentLoaded', function() {
     closePlaylistManagerBtn.addEventListener('click', togglePlaylistManager);
     createPlaylistBtn.addEventListener('click', createPlaylist);
     closeAddToPlaylistBtn.addEventListener('click', closeAddToPlaylistView);
+    addToPlaylistView.addEventListener('click', (e) => {
+        if (e.target === addToPlaylistView) closeAddToPlaylistView();
+    });
     favoritePlayerBtn.addEventListener('click', () => {
         if (songs[currentSongIndex]) toggleFavorite(songs[currentSongIndex]);
     });
@@ -1743,7 +1843,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     editPlaylistBtn.addEventListener('click', () => {
         editModalNameInput.value = activePlaylistName;
-        if (activePlaylistName === 'Ulubione') {
+        if (activePlaylistName === 'Ulubione' || activePlaylistName === 'Radio') {
             editModalNameInput.disabled = true;
             editModalNameInput.title = "Nie można zmienić nazwy playlisty systemowej";
         } else {
@@ -1797,7 +1897,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!newName) return alert("Nazwa nie może być pusta");
         
         // Zmiana nazwy
-        if (newName !== activePlaylistName && activePlaylistName !== 'Ulubione') {
+        if (newName !== activePlaylistName && activePlaylistName !== 'Ulubione' && activePlaylistName !== 'Radio') {
             if (playlists[newName]) return alert("Playlista o tej nazwie już istnieje");
             
             // Kopiowanie danych
@@ -1895,6 +1995,69 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Przywróć podświetlenie aktywnego utworu
         if (songs[currentSongIndex]) {
+             document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
+             document.querySelector(`.song-item:nth-child(${currentSongIndex + 1})`)?.classList.add('active');
+        }
+    }
+
+    function addPlaylistDropListeners(item, playlistName) {
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            item.classList.add('drag-over-playlist');
+        });
+        item.addEventListener('dragleave', () => {
+            item.classList.remove('drag-over-playlist');
+        });
+        item.addEventListener('drop', (e) => {
+            e.preventDefault();
+            item.classList.remove('drag-over-playlist');
+            handleDropOnPlaylist(playlistName);
+        });
+    }
+
+    function handleDropOnPlaylist(targetPlaylistName) {
+        if (dragStartIndex === undefined || dragStartIndex === null) return;
+        
+        const songToAdd = songs[dragStartIndex];
+        if (!songToAdd) return;
+
+        const songUrl = songToAdd.audio;
+        
+        if (targetPlaylistName === 'Wszystkie utwory' || !playlists[targetPlaylistName]) return;
+
+        if (playlists[targetPlaylistName].includes(songUrl)) {
+            alert(`Utwór "${songToAdd.title}" znajduje się już na playliście "${targetPlaylistName}".`);
+            return;
+        }
+
+        playlists[targetPlaylistName].push(songUrl);
+        savePlaylists();
+        
+        if (targetPlaylistName === activePlaylistName) {
+             const songUrls = playlists[activePlaylistName];
+             songs = songUrls.map(url => allSongs.find(s => s.audio === url)).filter(Boolean);
+             populatePlaylist();
+        }
+    }
+
+    function removeSongFromPlaylist(index) {
+        if (activePlaylistName === 'Wszystkie utwory') return;
+        
+        playlists[activePlaylistName].splice(index, 1);
+        savePlaylists();
+        
+        const songUrls = playlists[activePlaylistName];
+        songs = songUrls.map(url => allSongs.find(s => s.audio === url)).filter(Boolean);
+        
+        // Aktualizuj currentSongIndex, aby podświetlenie zostało na właściwym utworze
+        if (songs.length > 0 && audio.src) {
+             const newIndex = songs.findIndex(s => s.audio === audio.src);
+             if (newIndex !== -1) currentSongIndex = newIndex;
+        }
+
+        populatePlaylist();
+        
+        if (songs[currentSongIndex] && audio.src === songs[currentSongIndex].audio) {
              document.querySelectorAll('.song-item').forEach(item => item.classList.remove('active'));
              document.querySelector(`.song-item:nth-child(${currentSongIndex + 1})`)?.classList.add('active');
         }
