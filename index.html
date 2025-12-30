@@ -1607,10 +1607,22 @@ document.addEventListener('DOMContentLoaded', function() {
         await githubSyncDown();
         authSubmitBtn.textContent = 'Zaloguj';
 
-        const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+        let users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
 
-        if (users[username] && users[username].password === password) {
-            loginUser(username);
+        // Awaryjne przywracanie konta Admina, jeśli zniknęło po synchronizacji
+        if (!users['Admin']) {
+            users['Admin'] = { password: 'rabarbar' };
+            localStorage.setItem('bubify_users', JSON.stringify(users));
+        }
+
+        // Obsługa logowania (uwzględnienie wielkości liter dla Admina)
+        let targetUsername = username;
+        if (!users[username] && username.toLowerCase() === 'admin' && users['Admin']) {
+            targetUsername = 'Admin';
+        }
+
+        if (users[targetUsername] && users[targetUsername].password === password) {
+            loginUser(targetUsername);
             showToast('Zalogowano pomyślnie!');
         } else {
             showToast('Błędna nazwa użytkownika lub hasło');
