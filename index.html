@@ -1360,40 +1360,48 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Funkcja pobierająca dane z Supabase (Logowanie / Start)
-    async function syncDown() {
+    async function syncDown(specificUser = null) {
         if (!supabase) {
             console.log('Brak konfiguracji Supabase - działam offline.');
             return false;
         }
 
         try {
-            const { data, error } = await supabase
+            // 1. Pobierz listę użytkowników (globalną)
+            const { data: usersData } = await supabase
                 .from('bubify_data')
                 .select('content')
-                .eq('id', 'global_store')
+                .eq('id', 'global_users')
                 .single();
 
-            if (error) throw error;
-
-            if (data && data.content) {
-                const json = data.content;
-
-                // Aktualizacja localStorage
-                Object.keys(json).forEach(key => {
-                    // Sprawdzamy czy wartość nie jest obiektem, bo localStorage przechowuje tylko stringi
-                    if (typeof json[key] === 'string') {
-                        localStorage.setItem(key, json[key]);
-                    }
-                });
-
-                console.log('Pobrano dane z Supabase');
-                return true;
+            if (usersData && usersData.content) {
+                localStorage.setItem('bubify_users', JSON.stringify(usersData.content));
             }
+
+            // 2. Jeśli podano użytkownika, pobierz jego prywatne dane
+            if (specificUser) {
+                const { data: userData } = await supabase
+                    .from('bubify_data')
+                    .select('content')
+                    .eq('id', `user_${specificUser}`)
+                    .single();
+
+                if (userData && userData.content) {
+                    Object.keys(userData.content).forEach(key => {
+                        if (typeof userData.content[key] === 'string') {
+                            localStorage.setItem(key, userData.content[key]);
+                        }
+                    });
+                }
+            }
+
+            console.log('Pobrano dane z Supabase');
+            return true;
         } catch (e) {
             console.error('Błąd synchronizacji z Supabase (Down):', e);
             showToast('Błąd połączenia z bazą danych.');
+            return false;
         }
-        return false;
     }
 
     // Funkcja wysyłająca dane do Supabase (Zapis)
@@ -1403,18 +1411,33 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
         
-        const data = {};
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith('bubify_')) {
-                data[key] = localStorage.getItem(key);
-            }
-        }
         try {
-            const { error } = await supabase
+            // 1. Zapisz listę użytkowników (globalną)
+            const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+            const { error: usersError } = await supabase
                 .from('bubify_data')
-                .upsert({ id: 'global_store', content: data });
-            if (error) throw error;
+                .upsert({ id: 'global_users', content: users });
+            
+            if (usersError) throw usersError;
+
+            // 2. Jeśli użytkownik jest zalogowany, zapisz jego prywatne dane
+            if (currentUser) {
+                const userData = {};
+                const prefix = `${currentUser}_`;
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith(prefix)) {
+                        userData[key] = localStorage.getItem(key);
+                    }
+                }
+                
+                const { error: userError } = await supabase
+                    .from('bubify_data')
+                    .upsert({ id: `user_${currentUser}`, content: userData });
+                
+                if (userError) throw userError;
+            }
+
             console.log('Wysłano dane do Supabase');
             return true;
         } catch (e) {
@@ -1475,20 +1498,26 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${currentUser}_${key}`;
     }
 
-    function checkLogin() {
+    async function checkLogin() {
         const savedUser = localStorage.getItem('bubify_current_user');
         if (savedUser) {
-            loginUser(savedUser);
+            await loginUser(savedUser);
         } else {
             authView.classList.remove('hidden');
         }
     }
 
-    function loginUser(username) {
+    async function loginUser(username) {
         currentUser = username;
         localStorage.setItem('bubify_current_user', username);
         userProfileName.textContent = username;
         authView.classList.add('hidden');
+
+        // Pobierz dane użytkownika z serwera
+        if (supabase) {
+            showToast('Synchronizacja profilu...');
+            await syncDown(username);
+        }
 
         // Załaduj awatar użytkownika
         const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
@@ -1571,7 +1600,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Próba pobrania najnowszej bazy przed logowaniem
         authSubmitBtn.textContent = 'Łączenie...';
-        await syncDown();
+        await syncDown(null); // Pobierz tylko listę użytkowników
         authSubmitBtn.textContent = 'Zaloguj';
 
         let users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
@@ -1589,7 +1618,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (users[targetUsername] && users[targetUsername].password === password) {
-            loginUser(targetUsername);
+            await loginUser(targetUsername);
             showToast('Zalogowano pomyślnie!');
         } else {
             showToast('Błędna nazwa użytkownika lub hasło');
@@ -1806,7 +1835,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function adminDeleteUser(username) {
+    async function adminDeleteUser(username) {
         if (confirm(`Czy na pewno chcesz usunąć użytkownika "${username}" i wszystkie jego dane (playlisty, ustawienia)? Tej operacji nie można cofnąć.`)) {
             const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
             
@@ -1819,6 +1848,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (key && key.startsWith(`${username}_`)) {
                     localStorage.removeItem(key);
                 }
+            }
+
+            // Usuń dane z Supabase
+            if (supabase) {
+                await supabase.from('bubify_data').delete().eq('id', `user_${username}`);
             }
 
             addAdminLog('Usunięto użytkownika', username);
