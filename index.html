@@ -10,6 +10,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
 
+<!-- Import Supabase JS (Baza danych) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <!-- Ustawienia dla aplikacji webowej na iOS (ukrycie paska przeglądarki) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,7 +22,6 @@
 <style>
 :root {
     --bg-color: #121212;
-    --primary: #1a4ef8;
     --primary: #ffffff;
     --primary-hover: #e0e0e0;
     --text-primary: #ffffff;
@@ -54,7 +56,6 @@ body {
 .header { padding:15px 20px; display: flex; justify-content: space-between; align-items: center; font-size:18px; font-weight:600; letter-spacing:-0.5px; transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
 .header > span {
     font-family: 'Pacifico', cursive;
-    font-size: 24px;
     font-size: 28px;
     font-weight: 400; /* Czcionki ozdobne często wyglądają lepiej bez pogrubienia */
     transform: translateY(2px); /* Delikatne dopasowanie pionowe */
@@ -209,7 +210,6 @@ body {
 .playing .play-btn .icon-pause {
     display: block;
 }
-.player-footer { background-color:var(--card-bg); border-top-left-radius:35px; border-top-right-radius:15px; box-shadow:0 -5px 15px rgba(0,0,0,0.3); position:absolute; bottom:0; left:0; right:0; transform: translateY(calc(100% + 20px)); transition: transform 0.3s ease-in-out, background-color 0.3s ease; display: flex; flex-direction: column; max-height: 520px; overflow-y: auto; }
 .player-footer { background-color:var(--card-bg); border-radius: 0; box-shadow:0 -5px 15px rgba(0,0,0,0.3); position:absolute; bottom:0; left:0; right:0; transform: translateY(calc(100% + 20px)); transition: transform 0.3s ease-in-out, background-color 0.3s ease; display: flex; flex-direction: column; max-height: 520px; overflow-y: auto; }
 .search-container {
     padding: 20px 20px 10px 20px;
@@ -278,7 +278,6 @@ body {
 .playlist-title { font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; }
 .playlist-description { color: var(--text-secondary); font-size: 14px; margin-top: 8px; display: none; }
 
-.manage-playlists-btn { background: none; border: 1px solid var(--text-secondary); color: var(--text-secondary); padding: 5px 10px; border-radius: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 13px; transition: all 0.2s; }
 .manage-playlists-btn { background: none; border: 1px solid var(--text-secondary); color: var(--text-secondary); padding: 4px 10px; border-radius: 15px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 12px; transition: all 0.2s; align-self: flex-start; margin-top: 5px; }
 .manage-playlists-btn:hover { background-color: var(--control-bg); color: var(--text-primary); border-color: var(--control-bg); }
 .manage-playlists-btn svg { fill: currentColor; width: 16px; height: 16px; }
@@ -854,7 +853,6 @@ body.add-to-playlist-open .add-to-playlist-content {
     .desktop-logo {
         display: block;
         font-family: 'Pacifico', cursive;
-        font-size: 28px;
         font-size: 34px;
         padding: 0 15px 20px;
         text-align: center;
@@ -901,7 +899,6 @@ body.add-to-playlist-open .add-to-playlist-content {
         top: auto; left: auto; right: auto; bottom: auto; /* Reset pozycji mobilnej */
     }
     .search-container {
-        padding: 20px 30px 10px;
         padding: 20px 160px 10px 30px;
         background-color: rgba(32, 32, 32, 0.8); /* Dopasowanie do górnej części gradientu */
         backdrop-filter: blur(12px);
@@ -987,7 +984,7 @@ body.add-to-playlist-open .add-to-playlist-content {
     .control-btn:hover { background: transparent; transform: scale(1.1); }
     .control-btn svg { width: 16px; height: 16px; fill: #b3b3b3; }
     .control-btn .icon-heart-empty { fill: none; stroke: #b3b3b3; }
-    .control-btn:hover svg { fill: rgb(7, 7, 7)000; }
+    .control-btn:hover svg { fill: #ffffff; }
     .control-btn:hover .icon-heart-empty { fill: none; stroke: #fff; }
     .play-btn { width: 32px; height: 32px; background: var(--primary); border-radius: 50%; transform: scale(1); }
     .play-btn:hover { background: rgb(156, 25, 25); transform: scale(1.05); } /* Fix: Nadpisuje dziedziczone style hover */
@@ -1204,6 +1201,14 @@ body.add-to-playlist-open .add-to-playlist-content {
             <input type="password" id="account-new-password" class="auth-input" placeholder="Nowe hasło">
         </div>
 
+        <div class="account-section-title">Chmura / Synchronizacja</div>
+        <div class="account-form-group">
+            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
+                Status połączenia z bazą danych Supabase.
+            </div>
+            <button class="auth-btn auth-btn-secondary" id="sb-test-btn">Sprawdź połączenie</button>
+        </div>
+
         <div id="admin-panel-section" style="display: none;">
             <div class="account-section-title">Panel Administratora</div>
             
@@ -1332,12 +1337,91 @@ document.addEventListener('DOMContentLoaded', function() {
     const accountNewPassword = document.getElementById('account-new-password');
     const accountModalCancelBtn = document.getElementById('account-modal-cancel-btn');
     const accountModalSaveBtn = document.getElementById('account-modal-save-btn');
+    const sbTestBtn = document.getElementById('sb-test-btn');
     const adminPanelSection = document.getElementById('admin-panel-section');
     const adminAddUserBtn = document.getElementById('admin-add-user-btn');
     const adminNewUserNameInput = document.getElementById('admin-new-user-name');
     const adminNewUserPasswordInput = document.getElementById('admin-new-user-password');
     const adminUserList = document.getElementById('admin-user-list');
     const adminLogsList = document.getElementById('admin-logs-list');
+    const adminExportBtn = document.getElementById('admin-export-btn');
+    const adminImportBtn = document.getElementById('admin-import-btn');
+    const adminImportInput = document.getElementById('admin-import-input');
+    
+    const SUPABASE_CONFIG = {
+        URL: 'https://hgksfqrgfwvrsubwdrnl.supabase.co', // Twój URL jest poprawny
+        KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhna3NmcXJnZnd2cnN1Yndkcm5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxMjQzNTcsImV4cCI6MjA4MjcwMDM1N30.2C3QT0V79MsHDZwMLIorQYw81nJ-uq6WS5MD1EQ3cwM' // WAŻNE: Wklej tutaj klucz `anon public`
+    };
+
+    // Inicjalizacja klienta Supabase
+    let supabase = null;
+    if (window.supabase && SUPABASE_CONFIG.URL.startsWith('http')) {
+        supabase = window.supabase.createClient(SUPABASE_CONFIG.URL, SUPABASE_CONFIG.KEY);
+    }
+
+    // Funkcja pobierająca dane z Supabase (Logowanie / Start)
+    async function syncDown() {
+        if (!supabase) {
+            console.log('Brak konfiguracji Supabase - działam offline.');
+            return false;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('bubify_data')
+                .select('content')
+                .eq('id', 'global_store')
+                .single();
+
+            if (error) throw error;
+
+            if (data && data.content) {
+                const json = data.content;
+
+                // Aktualizacja localStorage
+                Object.keys(json).forEach(key => {
+                    // Sprawdzamy czy wartość nie jest obiektem, bo localStorage przechowuje tylko stringi
+                    if (typeof json[key] === 'string') {
+                        localStorage.setItem(key, json[key]);
+                    }
+                });
+
+                console.log('Pobrano dane z Supabase');
+                return true;
+            }
+        } catch (e) {
+            console.error('Błąd synchronizacji z Supabase (Down):', e);
+            showToast('Błąd połączenia z bazą danych.');
+        }
+        return false;
+    }
+
+    // Funkcja wysyłająca dane do Supabase (Zapis)
+    async function syncUp() {
+        if (!supabase) {
+            console.error("Brak konfiguracji Supabase.");
+            return false;
+        }
+        
+        const data = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('bubify_')) {
+                data[key] = localStorage.getItem(key);
+            }
+        }
+        try {
+            const { error } = await supabase
+                .from('bubify_data')
+                .upsert({ id: 'global_store', content: data });
+            if (error) throw error;
+            console.log('Wysłano dane do Supabase');
+            return true;
+        } catch (e) {
+            console.error('Błąd synchronizacji z Supabase (Up):', e);
+            return false;
+        }
+    }
 
     let isPlaying = false;
     let currentSongIndex = 0;
@@ -1382,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicjalizacja domyślnego konta Administratora
     const initUsers = JSON.parse(localStorage.getItem('bubify_users') || '{}');
     if (!initUsers['Admin']) {
-        initUsers['Admin'] = { password: 'rabarbar' };
+        initUsers['Admin'] = { password: 'rabarbar' }; // Ujednolicenie hasła startowego
         localStorage.setItem('bubify_users', JSON.stringify(initUsers));
     }
 
@@ -1479,20 +1563,55 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    authSubmitBtn.addEventListener('click', () => {
+    authSubmitBtn.addEventListener('click', async () => {
         const username = authUsernameInput.value.trim();
         const password = authPasswordInput.value.trim();
 
         if (!username || !password) return showToast('Wypełnij wszystkie pola');
 
-        const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+        // Próba pobrania najnowszej bazy przed logowaniem
+        authSubmitBtn.textContent = 'Łączenie...';
+        await syncDown();
+        authSubmitBtn.textContent = 'Zaloguj';
 
-        if (users[username] && users[username].password === password) {
-            loginUser(username);
+        let users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+
+        // Awaryjne przywracanie konta Admina, jeśli zniknęło po synchronizacji
+        if (!users['Admin']) {
+            users['Admin'] = { password: 'rabarbar' };
+            localStorage.setItem('bubify_users', JSON.stringify(users));
+        }
+
+        // Obsługa logowania (uwzględnienie wielkości liter dla Admina)
+        let targetUsername = username;
+        if (!users[username] && username.toLowerCase() === 'admin' && users['Admin']) {
+            targetUsername = 'Admin';
+        }
+
+        if (users[targetUsername] && users[targetUsername].password === password) {
+            loginUser(targetUsername);
+            showToast('Zalogowano pomyślnie!');
         } else {
             showToast('Błędna nazwa użytkownika lub hasło');
         }
     });
+
+    // --- Obsługa przycisku testu połączenia ---
+    if (sbTestBtn) {
+        sbTestBtn.addEventListener('click', async () => {
+            const originalText = sbTestBtn.textContent;
+            sbTestBtn.textContent = 'Łączenie...';
+            
+            const success = await syncDown();
+            
+            if (success) {
+                showToast('Połączenie aktywne! Baza danych dostępna.');
+            } else {
+                showToast('Nie udało się połączyć. Sprawdź konfigurację.');
+            }
+            sbTestBtn.textContent = originalText;
+        });
+    }
 
     
     // Obsługa menu użytkownika
@@ -1608,6 +1727,7 @@ document.addEventListener('DOMContentLoaded', function() {
         users[currentUser].bio = accountBioInput.value.trim();
 
         localStorage.setItem('bubify_users', JSON.stringify(users));
+        syncUp(); // Synchronizacja po zmianie ustawień konta
         accountSettingsModal.classList.remove('open');
         if (newPass) {
             showToast('Zmiany zostały zapisane. Hasło zostało zmienione.');
@@ -1677,6 +1797,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (users[username]) {
                 users[username].password = newPassword.trim();
                 localStorage.setItem('bubify_users', JSON.stringify(users));
+                syncUp(); // Synchronizacja po resecie hasła
                 addAdminLog('Zresetowano hasło', username);
                 showToast(`Hasło dla użytkownika "${username}" zostało zresetowane.`);
             }
@@ -1702,6 +1823,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             addAdminLog('Usunięto użytkownika', username);
             showToast(`Użytkownik "${username}" został usunięty.`);
+            syncUp(); // Synchronizacja po usunięciu użytkownika
             populateAdminUserList();
         }
     }
@@ -1717,14 +1839,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    adminAddUserBtn.addEventListener('click', () => {
+    adminAddUserBtn.addEventListener('click', async () => {
         const newUsername = adminNewUserNameInput.value.trim();
         const newPassword = adminNewUserPasswordInput.value.trim();
         if (!newUsername || !newPassword) return showToast('Nazwa użytkownika i hasło nie mogą być puste.');
+        
         const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
         if (users[newUsername]) return showToast('Użytkownik o tej nazwie już istnieje.');
+        
+        const originalText = adminAddUserBtn.textContent;
+        adminAddUserBtn.textContent = 'Zapisywanie...';
+        adminAddUserBtn.disabled = true;
+
         users[newUsername] = { password: newPassword, joinDate: new Date().toLocaleDateString(), plays: 0, bio: '' };
         localStorage.setItem('bubify_users', JSON.stringify(users));
+        syncUp(); // Synchronizacja po dodaniu użytkownika
+        
+        await syncUp(); // Czekamy na potwierdzenie zapisu w bazie
+        
+        adminAddUserBtn.textContent = originalText;
+        adminAddUserBtn.disabled = false;
+
         addAdminLog('Utworzono użytkownika', newUsername);
         showToast(`Utworzono użytkownika "${newUsername}".`);
         adminNewUserNameInput.value = '';
@@ -1746,6 +1881,7 @@ document.addEventListener('DOMContentLoaded', function() {
         body.classList.toggle('theme-vampire');
         const newTheme = body.classList.contains('theme-vampire') ? 'vampire' : 'default';
         localStorage.setItem(getStorageKey('musicPlayerTheme'), newTheme);
+        // Motyw jest lokalny, ale można go też synchronizować: githubSyncUp();
     });
 
     function formatTime(seconds) {
@@ -1783,11 +1919,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const playlistsToSave = { ...playlists };
         // Nie zapisujemy auto-generowanej playlisty
         delete playlistsToSave['Wszystkie utwory'];
-        localStorage.setItem(getStorageKey('bubify_playlists'), JSON.stringify(playlistsToSave));
+        localStorage.setItem(getStorageKey('bubify_playlists'), JSON.stringify(playlistsToSave));        
+        syncUp(); // Synchronizacja po każdej zmianie playlisty
     }
 
     function savePlaylistMetadata() {
         localStorage.setItem(getStorageKey('bubify_playlist_metadata'), JSON.stringify(playlistMetadata));
+        // syncUp(); // Metadata też jest synchronizowana w savePlaylists (bo wywołujemy to często razem), ale można dodać też tu.
     }
 
     function togglePlaylistManager() {
@@ -2392,10 +2530,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function cycleRepeatMode() {
         repeatMode = (repeatMode + 1) % 3;
         updateRepeatUI();
-        if (currentUser) {
-            localStorage.setItem(getStorageKey('bubify_repeat'), repeatMode);
-        }
         localStorage.setItem(getStorageKey('bubify_repeat'), repeatMode);
+        syncUp(); // Synchronizuj tryb powtarzania
     }
 
     function updateRepeatUI() {
@@ -2855,9 +2991,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const vol = e.target.value / 100;
         audio.volume = vol;
         updateVolumeSlider();
-        if (currentUser) {
-            localStorage.setItem(getStorageKey('bubify_volume'), vol);
-        }
         localStorage.setItem(getStorageKey('bubify_volume'), vol);
     });
     audio.volume = volumeSlider.value / 100;
@@ -2901,4 +3034,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-    
