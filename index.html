@@ -1338,6 +1338,111 @@ document.addEventListener('DOMContentLoaded', function() {
     const adminNewUserPasswordInput = document.getElementById('admin-new-user-password');
     const adminUserList = document.getElementById('admin-user-list');
     const adminLogsList = document.getElementById('admin-logs-list');
+    const adminExportBtn = document.getElementById('admin-export-btn');
+    const adminImportBtn = document.getElementById('admin-import-btn');
+    const adminImportInput = document.getElementById('admin-import-input');
+
+    // --- KONFIGURACJA GITHUB (BAZA DANYCH W CHMURZE) ---
+    const GH_CONFIG = {
+        // Wypełnij poniższe dane swoimi:
+        TOKEN: '', // np. 'ghp_TwojTokenTutaj1234567890'
+        TOKEN: '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', // np. 'ghp_TwojTokenTutaj1234567890'
+        OWNER: '', // np. 'TwojNickGitHub'
+        REPO: '',  // np. 'bubify-db'
+        PATH: 'database.json' // Nazwa pliku w repozytorium
+    };
+
+    // Funkcja pobierająca dane z GitHub (Logowanie / Start)
+    async function githubSyncDown() {
+        if (!GH_CONFIG.TOKEN || !GH_CONFIG.OWNER || !GH_CONFIG.REPO) {
+            console.log('Brak konfiguracji GitHub - działam offline.');
+            return false;
+        }
+        
+        try {
+            showToast('Pobieranie danych z chmury...');
+            const response = await fetch(`https://api.github.com/repos/${GH_CONFIG.OWNER}/${GH_CONFIG.REPO}/contents/${GH_CONFIG.PATH}`, {
+                headers: { 'Authorization': `token ${GH_CONFIG.TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                // Dekodowanie Base64 z obsługą polskich znaków (UTF-8)
+                const content = decodeURIComponent(escape(atob(data.content)));
+                const json = JSON.parse(content);
+
+                // Aktualizacja localStorage
+                Object.keys(json).forEach(key => {
+                    localStorage.setItem(key, json[key]);
+                });
+
+                // Zapisz SHA pliku (potrzebne do aktualizacji)
+                localStorage.setItem('gh_sha', data.sha);
+                console.log('Pobrano dane z GitHub');
+                return true;
+            } else if (response.status === 404) {
+                console.log('Plik bazy danych jeszcze nie istnieje na GitHub (zostanie utworzony przy zapisie).');
+                return true;
+            }
+        } catch (e) {
+            console.error('Błąd synchronizacji z GitHub (Down):', e);
+            showToast('Błąd połączenia z bazą danych.');
+        }
+        return false;
+    }
+
+    // Funkcja wysyłająca dane do GitHub (Zapis)
+    async function githubSyncUp() {
+        if (!GH_CONFIG.TOKEN || !GH_CONFIG.OWNER || !GH_CONFIG.REPO) return;
+
+        // 1. Pobierz aktualne SHA (aby uniknąć konfliktów)
+        let sha = localStorage.getItem('gh_sha');
+        try {
+            const getRes = await fetch(`https://api.github.com/repos/${GH_CONFIG.OWNER}/${GH_CONFIG.REPO}/contents/${GH_CONFIG.PATH}`, {
+                headers: { 'Authorization': `token ${GH_CONFIG.TOKEN}` }
+            });
+            if (getRes.ok) {
+                const getData = await getRes.json();
+                sha = getData.sha;
+            }
+        } catch(e) {}
+
+        // 2. Przygotuj dane (tylko klucze aplikacji Bubify)
+        const data = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.includes('bubify')) {
+                data[key] = localStorage.getItem(key);
+            }
+        }
+
+        // 3. Zakoduj do Base64 (z obsługą UTF-8)
+        const content = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+
+        try {
+            const putRes = await fetch(`https://api.github.com/repos/${GH_CONFIG.OWNER}/${GH_CONFIG.REPO}/contents/${GH_CONFIG.PATH}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${GH_CONFIG.TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: `Aktualizacja bazy Bubify: ${new Date().toLocaleString()}`,
+                    content: content,
+                    sha: sha // Jeśli undefined, GitHub utworzy nowy plik
+                })
+            });
+
+            if (putRes.ok) {
+                const putData = await putRes.json();
+                localStorage.setItem('gh_sha', putData.content.sha);
+                console.log('Wysłano dane do GitHub');
+                // Opcjonalnie: showToast('Zapisano w chmurze');
+            }
+        } catch (e) {
+            console.error('Błąd synchronizacji z GitHub (Up):', e);
+        }
+    }
 
     let isPlaying = false;
     let currentSongIndex = 0;
@@ -1479,16 +1584,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    authSubmitBtn.addEventListener('click', () => {
+    authSubmitBtn.addEventListener('click', async () => {
         const username = authUsernameInput.value.trim();
         const password = authPasswordInput.value.trim();
 
         if (!username || !password) return showToast('Wypełnij wszystkie pola');
 
+        // Próba pobrania najnowszej bazy przed logowaniem
+        authSubmitBtn.textContent = 'Łączenie...';
+        await githubSyncDown();
+        authSubmitBtn.textContent = 'Zaloguj';
+
         const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
 
         if (users[username] && users[username].password === password) {
             loginUser(username);
+            showToast('Zalogowano pomyślnie!');
         } else {
             showToast('Błędna nazwa użytkownika lub hasło');
         }
@@ -1608,6 +1719,7 @@ document.addEventListener('DOMContentLoaded', function() {
         users[currentUser].bio = accountBioInput.value.trim();
 
         localStorage.setItem('bubify_users', JSON.stringify(users));
+        githubSyncUp(); // Synchronizacja po zmianie ustawień konta
         accountSettingsModal.classList.remove('open');
         if (newPass) {
             showToast('Zmiany zostały zapisane. Hasło zostało zmienione.');
@@ -1677,6 +1789,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (users[username]) {
                 users[username].password = newPassword.trim();
                 localStorage.setItem('bubify_users', JSON.stringify(users));
+                githubSyncUp(); // Synchronizacja po resecie hasła
                 addAdminLog('Zresetowano hasło', username);
                 showToast(`Hasło dla użytkownika "${username}" zostało zresetowane.`);
             }
@@ -1702,6 +1815,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             addAdminLog('Usunięto użytkownika', username);
             showToast(`Użytkownik "${username}" został usunięty.`);
+            githubSyncUp(); // Synchronizacja po usunięciu użytkownika
             populateAdminUserList();
         }
     }
@@ -1725,6 +1839,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (users[newUsername]) return showToast('Użytkownik o tej nazwie już istnieje.');
         users[newUsername] = { password: newPassword, joinDate: new Date().toLocaleDateString(), plays: 0, bio: '' };
         localStorage.setItem('bubify_users', JSON.stringify(users));
+        githubSyncUp(); // Synchronizacja po dodaniu użytkownika
         addAdminLog('Utworzono użytkownika', newUsername);
         showToast(`Utworzono użytkownika "${newUsername}".`);
         adminNewUserNameInput.value = '';
@@ -1746,6 +1861,7 @@ document.addEventListener('DOMContentLoaded', function() {
         body.classList.toggle('theme-vampire');
         const newTheme = body.classList.contains('theme-vampire') ? 'vampire' : 'default';
         localStorage.setItem(getStorageKey('musicPlayerTheme'), newTheme);
+        // Motyw jest lokalny, ale można go też synchronizować: githubSyncUp();
     });
 
     function formatTime(seconds) {
@@ -1784,10 +1900,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Nie zapisujemy auto-generowanej playlisty
         delete playlistsToSave['Wszystkie utwory'];
         localStorage.setItem(getStorageKey('bubify_playlists'), JSON.stringify(playlistsToSave));
+        githubSyncUp(); // Synchronizacja po każdej zmianie playlisty
     }
 
     function savePlaylistMetadata() {
         localStorage.setItem(getStorageKey('bubify_playlist_metadata'), JSON.stringify(playlistMetadata));
+        // githubSyncUp(); // Metadata też jest synchronizowana w savePlaylists (bo wywołujemy to często razem), ale można dodać też tu.
     }
 
     function togglePlaylistManager() {
@@ -2392,10 +2510,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function cycleRepeatMode() {
         repeatMode = (repeatMode + 1) % 3;
         updateRepeatUI();
-        if (currentUser) {
-            localStorage.setItem(getStorageKey('bubify_repeat'), repeatMode);
-        }
         localStorage.setItem(getStorageKey('bubify_repeat'), repeatMode);
+        // githubSyncUp(); // Opcjonalnie synchronizuj tryb powtarzania
     }
 
     function updateRepeatUI() {
@@ -2855,9 +2971,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const vol = e.target.value / 100;
         audio.volume = vol;
         updateVolumeSlider();
-        if (currentUser) {
-            localStorage.setItem(getStorageKey('bubify_volume'), vol);
-        }
         localStorage.setItem(getStorageKey('bubify_volume'), vol);
     });
     audio.volume = volumeSlider.value / 100;
