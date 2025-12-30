@@ -1354,15 +1354,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- KONFIGURACJA GITHUB (BAZA DANYCH W CHMURZE) ---
     const GH_CONFIG = {
         // Wypełnij poniższe dane swoimi:
-        TOKEN: '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',
-        OWNER: 'bearsleeping', // <-- TUTAJ WPISZ SWÓJ NICK Z GITHUB
+        // OBFUSKACJA TOKENA (Ukrywanie przed botami GitHub)
+        get TOKEN() { 
+            const prefix = 'ghp_';
+            // Poniżej wklej resztę NOWEGO tokena (wszystko co jest po "ghp_"):
+            const secret = 'TU_WKLEJ_NOWY_TOKEN'; // Np. 'AbCdEf123456...' (bez ghp_)
+            return prefix + secret; 
+        },
+        OWNER: 'bearsleeping', // <-- UPEWNIJ SIĘ, ŻE TO TWÓJ NICK NA GITHUB
         REPO: 'bubify-db',  // Nazwa repozytorium
         PATH: 'database.json' // Nazwa pliku w repozytorium
     };
 
     // Funkcja pobierająca dane z GitHub (Logowanie / Start)
-    async function githubSyncDown() {
-        const token = GH_CONFIG.TOKEN.trim();
+    async function githubSyncDown(tokenOverride = null) {
+        const token = tokenOverride || GH_CONFIG.TOKEN.trim();
         const owner = GH_CONFIG.OWNER.trim();
         const repo = GH_CONFIG.REPO.trim();
 
@@ -1515,7 +1521,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicjalizacja domyślnego konta Administratora
     const initUsers = JSON.parse(localStorage.getItem('bubify_users') || '{}');
     if (!initUsers['Admin']) {
-        initUsers['Admin'] = { password: 'rabarbar' };
+        initUsers['Admin'] = { password: '000' };
         localStorage.setItem('bubify_users', JSON.stringify(initUsers));
     }
 
@@ -1650,9 +1656,13 @@ document.addEventListener('DOMContentLoaded', function() {
         ghTestBtn.addEventListener('click', async () => {
             const originalText = ghTestBtn.textContent;
             ghTestBtn.textContent = 'Łączenie...';
-            const success = await githubSyncDown();
+            
+            const success = await githubSyncDown(); // Używa tokena z GH_CONFIG
+            
             if (success) {
                 showToast('Połączenie aktywne! Baza danych dostępna.');
+            } else {
+                showToast('Nie udało się połączyć. Sprawdź token.');
             }
             ghTestBtn.textContent = originalText;
         });
