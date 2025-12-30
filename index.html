@@ -1362,15 +1362,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Funkcja pobierająca dane z GitHub (Logowanie / Start)
     async function githubSyncDown() {
-        if (!GH_CONFIG.TOKEN || !GH_CONFIG.OWNER || !GH_CONFIG.REPO || GH_CONFIG.OWNER.includes('WPISZ')) {
+        const token = GH_CONFIG.TOKEN.trim();
+        const owner = GH_CONFIG.OWNER.trim();
+        const repo = GH_CONFIG.REPO.trim();
+
+        if (!token || !owner || !repo || owner.includes('WPISZ')) {
             console.log('Brak pełnej konfiguracji GitHub - działam offline.');
             return false;
         }
         
         try {
-            showToast('Pobieranie danych z chmury...');
-            const response = await fetch(`https://api.github.com/repos/${GH_CONFIG.OWNER}/${GH_CONFIG.REPO}/contents/${GH_CONFIG.PATH}`, {
-                headers: { 'Authorization': `token ${GH_CONFIG.TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
+            // showToast('Pobieranie danych z chmury...');
+            const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${GH_CONFIG.PATH}`, {
+                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
             });
 
             if (response.ok) {
@@ -1392,16 +1396,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Plik bazy danych jeszcze nie istnieje na GitHub (zostanie utworzony przy zapisie).');
                 return true;
             }
+            else {
+                console.error('GitHub Error:', response.status);
+                if (response.status === 401) showToast('Błąd 401: Nieprawidłowy Token!');
+                else if (response.status === 403) showToast('Błąd 403: Brak dostępu (Token).');
+                else if (response.status === 404) showToast('Błąd 404: Nie znaleziono repozytorium.');
+                else showToast(`Błąd GitHub: ${response.status}`);
+                return false;
+            }
         } catch (e) {
             console.error('Błąd synchronizacji z GitHub (Down):', e);
-            showToast('Błąd połączenia z bazą danych.');
+            showToast('Błąd sieci lub CORS.');
         }
         return false;
     }
 
     // Funkcja wysyłająca dane do GitHub (Zapis)
     async function githubSyncUp() {
-        if (!GH_CONFIG.TOKEN || !GH_CONFIG.OWNER || !GH_CONFIG.REPO || GH_CONFIG.OWNER.includes('WPISZ')) {
+        const token = GH_CONFIG.TOKEN.trim();
+        const owner = GH_CONFIG.OWNER.trim();
+        const repo = GH_CONFIG.REPO.trim();
+
+        if (!token || !owner || !repo || owner.includes('WPISZ')) {
             console.error("Błąd synchronizacji: Nie uzupełniono OWNER lub REPO w kodzie.");
             showToast("Błąd: Uzupełnij swój nick GitHub w kodzie!");
             return;
@@ -1410,8 +1426,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // 1. Pobierz aktualne SHA (aby uniknąć konfliktów)
         let sha = localStorage.getItem('gh_sha');
         try {
-            const getRes = await fetch(`https://api.github.com/repos/${GH_CONFIG.OWNER}/${GH_CONFIG.REPO}/contents/${GH_CONFIG.PATH}`, {
-                headers: { 'Authorization': `token ${GH_CONFIG.TOKEN}` }
+            const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${GH_CONFIG.PATH}`, {
+                headers: { 'Authorization': `token ${token}` }
             });
             if (getRes.ok) {
                 const getData = await getRes.json();
@@ -1432,10 +1448,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const content = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
 
         try {
-            const putRes = await fetch(`https://api.github.com/repos/${GH_CONFIG.OWNER}/${GH_CONFIG.REPO}/contents/${GH_CONFIG.PATH}`, {
+            const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${GH_CONFIG.PATH}`, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `token ${GH_CONFIG.TOKEN}`,
+                    'Authorization': `token ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -1637,8 +1653,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const success = await githubSyncDown();
             if (success) {
                 showToast('Połączenie aktywne! Baza danych dostępna.');
-            } else {
-                showToast('Błąd połączenia. Sprawdź konfigurację (Token, Owner, Repo).');
             }
             ghTestBtn.textContent = originalText;
         });
