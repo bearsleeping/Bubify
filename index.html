@@ -1204,6 +1204,14 @@ body.add-to-playlist-open .add-to-playlist-content {
             <input type="password" id="account-new-password" class="auth-input" placeholder="Nowe hasło">
         </div>
 
+        <div class="account-section-title">Chmura / Synchronizacja</div>
+        <div class="account-form-group">
+            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
+                Sprawdź, czy Twoje dane są bezpiecznie zapisywane na GitHub.
+            </div>
+            <button class="auth-btn auth-btn-secondary" id="gh-test-btn">Sprawdź połączenie</button>
+        </div>
+
         <div id="admin-panel-section" style="display: none;">
             <div class="account-section-title">Panel Administratora</div>
             
@@ -1332,6 +1340,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const accountNewPassword = document.getElementById('account-new-password');
     const accountModalCancelBtn = document.getElementById('account-modal-cancel-btn');
     const accountModalSaveBtn = document.getElementById('account-modal-save-btn');
+    const ghTestBtn = document.getElementById('gh-test-btn');
     const adminPanelSection = document.getElementById('admin-panel-section');
     const adminAddUserBtn = document.getElementById('admin-add-user-btn');
     const adminNewUserNameInput = document.getElementById('admin-new-user-name');
@@ -1604,6 +1613,21 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Błędna nazwa użytkownika lub hasło');
         }
     });
+
+    // --- Obsługa przycisku testu połączenia ---
+    if (ghTestBtn) {
+        ghTestBtn.addEventListener('click', async () => {
+            const originalText = ghTestBtn.textContent;
+            ghTestBtn.textContent = 'Łączenie...';
+            const success = await githubSyncDown();
+            if (success) {
+                showToast('Połączenie aktywne! Baza danych dostępna.');
+            } else {
+                showToast('Błąd połączenia. Sprawdź konfigurację (Token, Owner, Repo).');
+            }
+            ghTestBtn.textContent = originalText;
+        });
+    }
 
     
     // Obsługa menu użytkownika
