@@ -736,6 +736,35 @@ body.add-to-playlist-open .add-to-playlist-content {
 }
 .account-stat-value { font-size: 18px; font-weight: 700; color: var(--primary); display: block; }
 .account-stat-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; margin-top: 4px; display: block; }
+.admin-user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.admin-user-item:last-child { border-bottom: none; }
+.admin-user-actions { display: flex; align-items: center; gap: 15px; }
+.admin-user-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    padding: 0;
+}
+.admin-user-actions button:hover { opacity: 1; }
+.admin-reset-password-btn { color: #3478f6; } /* iOS Blue */
+.admin-delete-user-btn { color: #ff453a; } /* iOS Red */
+.admin-log-item {
+    padding: 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.admin-log-item:last-child { border-bottom: none; }
+.admin-log-time { color: var(--text-secondary); font-size: 10px; margin-right: 5px; }
 
 /* Toast Notifications */
 .toast-container {
@@ -1175,6 +1204,31 @@ body.add-to-playlist-open .add-to-playlist-content {
             <input type="password" id="account-new-password" class="auth-input" placeholder="Nowe hasło">
         </div>
 
+        <div id="admin-panel-section" style="display: none;">
+            <div class="account-section-title">Panel Administratora</div>
+            
+            <div class="account-form-group">
+                <label style="margin-bottom: 10px;">Dodaj nowego użytkownika</label>
+                <input type="text" id="admin-new-user-name" class="auth-input" placeholder="Nowa nazwa użytkownika" style="margin-bottom: 10px;">
+                <input type="password" id="admin-new-user-password" class="auth-input" placeholder="Nowe hasło">
+                <button class="auth-btn auth-btn-secondary" id="admin-add-user-btn" style="width: auto; padding: 8px 15px; font-size: 13px; margin-top: 5px;">Dodaj użytkownika</button>
+            </div>
+
+            <div class="account-form-group">
+                <label style="margin-bottom: 10px;">Zarządzaj użytkownikami</label>
+                <div id="admin-user-list" style="max-height: 150px; overflow-y: auto; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 5px;">
+                    <!-- User items will be populated by JS -->
+                </div>
+            </div>
+
+            <div class="account-form-group">
+                <label style="margin-bottom: 10px;">Logi zdarzeń</label>
+                <div id="admin-logs-list" style="max-height: 150px; overflow-y: auto; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 5px; font-size: 12px; color: var(--text-secondary);">
+                    <!-- Logs will be populated here -->
+                </div>
+            </div>
+        </div>
+
         <div class="modal-footer">
             <button class="modal-btn modal-btn-cancel" id="account-modal-cancel-btn">Anuluj</button>
             <button class="modal-btn modal-btn-save" id="account-modal-save-btn">Zapisz zmiany</button>
@@ -1191,7 +1245,6 @@ body.add-to-playlist-open .add-to-playlist-content {
         <input type="text" id="auth-username" class="auth-input" placeholder="Nazwa użytkownika">
         <input type="password" id="auth-password" class="auth-input" placeholder="Hasło">
         <button class="auth-btn auth-btn-primary" id="auth-submit-btn">Zaloguj</button>
-        <div class="auth-switch-text" id="auth-switch-mode">Nie masz konta? Zarejestruj się</div>
         <div style="margin-top: 20px; font-size: 11px; color: #666;">
             Dane są zapisywane tylko w tej przeglądarce.
         </div>
@@ -1258,7 +1311,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const authUsernameInput = document.getElementById('auth-username');
     const authPasswordInput = document.getElementById('auth-password');
     const authSubmitBtn = document.getElementById('auth-submit-btn');
-    const authSwitchMode = document.getElementById('auth-switch-mode');
     const authTitle = document.getElementById('auth-title');
     const userProfileBtn = document.getElementById('user-profile-btn');
     const userProfileName = document.getElementById('user-profile-name');
@@ -1280,6 +1332,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const accountNewPassword = document.getElementById('account-new-password');
     const accountModalCancelBtn = document.getElementById('account-modal-cancel-btn');
     const accountModalSaveBtn = document.getElementById('account-modal-save-btn');
+    const adminPanelSection = document.getElementById('admin-panel-section');
+    const adminAddUserBtn = document.getElementById('admin-add-user-btn');
+    const adminNewUserNameInput = document.getElementById('admin-new-user-name');
+    const adminNewUserPasswordInput = document.getElementById('admin-new-user-password');
+    const adminUserList = document.getElementById('admin-user-list');
+    const adminLogsList = document.getElementById('admin-logs-list');
 
     let isPlaying = false;
     let currentSongIndex = 0;
@@ -1289,7 +1347,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let repeatMode = 0; // 0: none, 1: all, 2: one
     let songForAction = null; // Przechowuje utwór do operacji (dodaj/usuń)
     let currentUser = null; // Aktualnie zalogowany użytkownik
-    let isRegisterMode = false;
     let tempAvatarDataUrl = null;
 
     // --- Toast Notification System ---
@@ -1362,6 +1419,22 @@ document.addEventListener('DOMContentLoaded', function() {
         loadPlaylists();
         applyTheme(localStorage.getItem(getStorageKey('musicPlayerTheme')));
         
+        // Załaduj głośność użytkownika
+        const savedVolume = localStorage.getItem(getStorageKey('bubify_volume'));
+        if (savedVolume !== null) {
+            const vol = parseFloat(savedVolume);
+            audio.volume = vol;
+            volumeSlider.value = vol * 100;
+            updateVolumeSlider();
+        }
+
+        // Załaduj tryb powtarzania
+        const savedRepeat = localStorage.getItem(getStorageKey('bubify_repeat'));
+        if (savedRepeat !== null) {
+            repeatMode = parseInt(savedRepeat);
+            updateRepeatUI();
+        }
+        
         // Pobierz utwory (jeśli jeszcze nie pobrane) i odśwież widok
         if (allSongs.length === 0) {
             fetchSongs();
@@ -1388,7 +1461,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function resetHeaderAvatar() {
-        // Przywraca domyślną ikonę SVG (można zaimplementować przeładowanie strony przy wylogowaniu, co i tak robimy)
+        const profileBtn = document.getElementById('user-profile-btn');
+        const existingImg = profileBtn.querySelector('img');
+        if (existingImg) existingImg.remove();
+        
+        if (!profileBtn.querySelector('svg')) {
+            const svgHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+            profileBtn.insertAdjacentHTML('afterbegin', svgHTML);
+        }
     }
 
     function logoutUser() {
@@ -1407,38 +1487,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
 
-        if (isRegisterMode) {
-            if (users[username]) {
-                showToast('Taki użytkownik już istnieje!');
-            } else {
-                users[username] = { password: password }; // W prawdziwej aplikacji hasło powinno być hashowane!
-                users[username] = { 
-                    password: password,
-                    joinDate: new Date().toLocaleDateString(),
-                    plays: 0,
-                    bio: ''
-                }; 
-                localStorage.setItem('bubify_users', JSON.stringify(users));
-                showToast('Konto utworzone! Możesz się zalogować.');
-                toggleAuthMode();
-            }
+        if (users[username] && users[username].password === password) {
+            loginUser(username);
         } else {
-            if (users[username] && users[username].password === password) {
-                loginUser(username);
-            } else {
-                showToast('Błędna nazwa użytkownika lub hasło');
-            }
+            showToast('Błędna nazwa użytkownika lub hasło');
         }
     });
 
-    function toggleAuthMode() {
-        isRegisterMode = !isRegisterMode;
-        authTitle.textContent = isRegisterMode ? 'Zarejestruj się' : 'Zaloguj się';
-        authSubmitBtn.textContent = isRegisterMode ? 'Utwórz konto' : 'Zaloguj';
-        authSwitchMode.textContent = isRegisterMode ? 'Masz już konto? Zaloguj się' : 'Nie masz konta? Zarejestruj się';
-    }
-
-    authSwitchMode.addEventListener('click', toggleAuthMode);
     
     // Obsługa menu użytkownika
     userProfileBtn.addEventListener('click', (e) => {
@@ -1484,6 +1539,15 @@ document.addEventListener('DOMContentLoaded', function() {
             accountAvatarImg.src = userData.avatar;
         } else {
             accountAvatarImg.src = `https://placehold.co/100x100/333/999?text=${currentUser.charAt(0).toUpperCase()}`;
+        }
+
+        // Admin Panel Logic
+        if (currentUser === 'Admin') {
+            adminPanelSection.style.display = 'block';
+            populateAdminUserList();
+            renderAdminLogs();
+        } else {
+            adminPanelSection.style.display = 'none';
         }
 
         accountSettingsModal.classList.add('open');
@@ -1545,6 +1609,127 @@ document.addEventListener('DOMContentLoaded', function() {
 
         localStorage.setItem('bubify_users', JSON.stringify(users));
         accountSettingsModal.classList.remove('open');
+        if (newPass) {
+            showToast('Zmiany zostały zapisane. Hasło zostało zmienione.');
+        } else {
+            showToast('Zmiany zostały zapisane.');
+        }
+    });
+
+    // --- Panel Administratora ---
+    function populateAdminUserList() {
+        adminUserList.innerHTML = '';
+        const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+        
+        Object.keys(users).forEach(username => {
+            const userItem = document.createElement('div');
+            userItem.className = 'admin-user-item';
+            
+            let content = `<span>${username}</span>`;
+            if (username !== 'Admin') {
+                content += `
+                    <div class="admin-user-actions">
+                        <button class="admin-reset-password-btn" data-username="${username}">Resetuj hasło</button>
+                        <button class="admin-delete-user-btn" data-username="${username}">Usuń</button>
+                    </div>
+                `;
+            }
+            userItem.innerHTML = content;
+            
+            adminUserList.appendChild(userItem);
+        });
+    }
+
+    function addAdminLog(action, targetUser) {
+        const logs = JSON.parse(localStorage.getItem('bubify_admin_logs') || '[]');
+        const newLog = {
+            timestamp: new Date().toLocaleString(),
+            admin: currentUser,
+            action: action,
+            target: targetUser
+        };
+        logs.unshift(newLog);
+        if (logs.length > 50) logs.pop(); // Zachowaj ostatnie 50 logów
+        localStorage.setItem('bubify_admin_logs', JSON.stringify(logs));
+        renderAdminLogs();
+    }
+
+    function renderAdminLogs() {
+        if (!adminLogsList) return;
+        adminLogsList.innerHTML = '';
+        const logs = JSON.parse(localStorage.getItem('bubify_admin_logs') || '[]');
+        if (logs.length === 0) {
+            adminLogsList.innerHTML = '<div style="padding:5px; text-align:center;">Brak logów</div>';
+            return;
+        }
+        logs.forEach(log => {
+            const div = document.createElement('div');
+            div.className = 'admin-log-item';
+            div.innerHTML = `<span class="admin-log-time">[${log.timestamp}]</span> <span style="color: var(--text-primary);">${log.action}:</span> ${log.target}`;
+            adminLogsList.appendChild(div);
+        });
+    }
+
+    function adminResetPassword(username) {
+        const newPassword = prompt(`Wprowadź nowe hasło dla użytkownika "${username}":`);
+        if (newPassword && newPassword.trim() !== "") {
+            const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+            if (users[username]) {
+                users[username].password = newPassword.trim();
+                localStorage.setItem('bubify_users', JSON.stringify(users));
+                addAdminLog('Zresetowano hasło', username);
+                showToast(`Hasło dla użytkownika "${username}" zostało zresetowane.`);
+            }
+        } else if (newPassword !== null) {
+            showToast('Hasło nie może być puste.');
+        }
+    }
+
+    function adminDeleteUser(username) {
+        if (confirm(`Czy na pewno chcesz usunąć użytkownika "${username}" i wszystkie jego dane (playlisty, ustawienia)? Tej operacji nie można cofnąć.`)) {
+            const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+            
+            delete users[username];
+            localStorage.setItem('bubify_users', JSON.stringify(users));
+
+            // Usuń wszystkie dane powiązane z tym użytkownikiem
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith(`${username}_`)) {
+                    localStorage.removeItem(key);
+                }
+            }
+
+            addAdminLog('Usunięto użytkownika', username);
+            showToast(`Użytkownik "${username}" został usunięty.`);
+            populateAdminUserList();
+        }
+    }
+
+    adminUserList.addEventListener('click', (e) => {
+        if (e.target.tagName === 'BUTTON' && e.target.dataset.username) {
+            const username = e.target.dataset.username;
+            if (e.target.classList.contains('admin-delete-user-btn')) {
+                adminDeleteUser(username);
+            } else if (e.target.classList.contains('admin-reset-password-btn')) {
+                adminResetPassword(username);
+            }
+        }
+    });
+
+    adminAddUserBtn.addEventListener('click', () => {
+        const newUsername = adminNewUserNameInput.value.trim();
+        const newPassword = adminNewUserPasswordInput.value.trim();
+        if (!newUsername || !newPassword) return showToast('Nazwa użytkownika i hasło nie mogą być puste.');
+        const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+        if (users[newUsername]) return showToast('Użytkownik o tej nazwie już istnieje.');
+        users[newUsername] = { password: newPassword, joinDate: new Date().toLocaleDateString(), plays: 0, bio: '' };
+        localStorage.setItem('bubify_users', JSON.stringify(users));
+        addAdminLog('Utworzono użytkownika', newUsername);
+        showToast(`Utworzono użytkownika "${newUsername}".`);
+        adminNewUserNameInput.value = '';
+        adminNewUserPasswordInput.value = '';
+        populateAdminUserList();
     });
 
     // --- Przełączanie i zapamiętywanie motywu ---
@@ -1846,6 +2031,21 @@ document.addEventListener('DOMContentLoaded', function() {
           // Ustaw aktywną playlistę (ostatnio używaną lub domyślną)
           const lastActivePlaylist = localStorage.getItem(getStorageKey('bubify_lastActivePlaylist')) || 'Wszystkie utwory';
           setActivePlaylist(playlists[lastActivePlaylist] ? lastActivePlaylist : 'Wszystkie utwory');
+
+          // Przywróć ostatnio odtwarzany utwór i czas
+          const lastSongUrl = localStorage.getItem(getStorageKey('bubify_lastSong'));
+          const lastTime = localStorage.getItem(getStorageKey('bubify_lastTime'));
+          
+          if (lastSongUrl) {
+              const index = songs.findIndex(s => s.audio === lastSongUrl);
+              if (index !== -1) {
+                  currentSongIndex = index;
+                  loadSong(currentSongIndex);
+                  if (lastTime) {
+                      audio.currentTime = parseFloat(lastTime);
+                  }
+              }
+          }
 
           fetchAlbumCovers(); // Pobierz okładki w tle
       })
@@ -2192,6 +2392,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function cycleRepeatMode() {
         repeatMode = (repeatMode + 1) % 3;
         updateRepeatUI();
+        if (currentUser) {
+            localStorage.setItem(getStorageKey('bubify_repeat'), repeatMode);
+        }
+        localStorage.setItem(getStorageKey('bubify_repeat'), repeatMode);
     }
 
     function updateRepeatUI() {
@@ -2648,8 +2852,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     volumeSlider.addEventListener('input', (e) => {
-        audio.volume = e.target.value / 100;
+        const vol = e.target.value / 100;
+        audio.volume = vol;
         updateVolumeSlider();
+        if (currentUser) {
+            localStorage.setItem(getStorageKey('bubify_volume'), vol);
+        }
+        localStorage.setItem(getStorageKey('bubify_volume'), vol);
     });
     audio.volume = volumeSlider.value / 100;
     updateVolumeSlider();
@@ -2664,6 +2873,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.addEventListener('mouseup', handleScrubEnd);
     document.addEventListener('touchend', handleScrubEnd);
+
+    // Zapisywanie stanu odtwarzania (utwór i czas)
+    function savePlaybackState() {
+        if (songs[currentSongIndex]) {
+            localStorage.setItem(getStorageKey('bubify_lastSong'), songs[currentSongIndex].audio);
+            localStorage.setItem(getStorageKey('bubify_lastTime'), audio.currentTime);
+        }
+    }
+
+    window.addEventListener('beforeunload', savePlaybackState);
+    window.addEventListener('pagehide', savePlaybackState); // Dla mobilnych przeglądarek
+    audio.addEventListener('pause', savePlaybackState);
 
     // Integracja z Media Session API (sterowanie z belki systemowej / ekranu blokady)
     if ('mediaSession' in navigator) {
@@ -2680,3 +2901,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+    
