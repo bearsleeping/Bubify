@@ -1354,16 +1354,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- KONFIGURACJA GITHUB (BAZA DANYCH W CHMURZE) ---
     const GH_CONFIG = {
         // Wypełnij poniższe dane swoimi:
-<<<<<<< HEAD
         TOKEN: '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', // np. 'ghp_TwojTokenTutaj1234567890'
         OWNER: 'bearsleeping', // <-- TUTAJ WPISZ SWÓJ NICK Z GITHUB
         REPO: 'bubify-db',  // Nazwa repozytorium
-=======
-        TOKEN: '', // np. 'ghp_TwojTokenTutaj1234567890'
-        TOKEN: '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', // np. 'ghp_TwojTokenTutaj1234567890'
-        OWNER: '', // np. 'TwojNickGitHub'
-        REPO: '',  // np. 'bubify-db'
->>>>>>> ee0819ad5122ffef3de04ac22ae4987e5202a1a6
         PATH: 'database.json' // Nazwa pliku w repozytorium
     };
 
@@ -1615,9 +1608,24 @@ document.addEventListener('DOMContentLoaded', function() {
         authSubmitBtn.textContent = 'Zaloguj';
 
         const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+        let users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
 
         if (users[username] && users[username].password === password) {
             loginUser(username);
+        // Awaryjne przywracanie konta Admina, jeśli zniknęło po synchronizacji
+        if (!users['Admin']) {
+            users['Admin'] = { password: 'rabarbar' };
+            localStorage.setItem('bubify_users', JSON.stringify(users));
+        }
+
+        // Obsługa logowania (uwzględnienie wielkości liter dla Admina)
+        let targetUsername = username;
+        if (!users[username] && username.toLowerCase() === 'admin' && users['Admin']) {
+            targetUsername = 'Admin';
+        }
+
+        if (users[targetUsername] && users[targetUsername].password === password) {
+            loginUser(targetUsername);
             showToast('Zalogowano pomyślnie!');
         } else {
             showToast('Błędna nazwa użytkownika lub hasło');
