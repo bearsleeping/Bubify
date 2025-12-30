@@ -2510,16 +2510,27 @@ document.addEventListener('DOMContentLoaded', function() {
                         const coverUrl = data.results[0].artworkUrl100.replace('100x100', '600x600');
                         allSongs[index].cover = coverUrl;
 
-                        if (index === currentSongIndex) {
+                        // Aktualizacja okładki w odtwarzaczu (jeśli to ten utwór)
+                        if (songs[currentSongIndex] === song) {
                             document.querySelector('.album-cover img').src = coverUrl;
                             // Zaktualizuj również okładkę w Media Session
                             if ('mediaSession' in navigator && navigator.mediaSession.metadata) {
                                 navigator.mediaSession.metadata.artwork = [
                                     { src: coverUrl, sizes: '96x96', type: 'image/jpeg' },
                                     { src: coverUrl, sizes: '512x512', type: 'image/jpeg' },
-                                ]; // Aktualizuje grafikę dla aktualnie odtwarzanego utworu w Media Session
+                                ]; 
                             }
                         }
+
+                        // Aktualizacja okładki na liście (jeśli jest widoczna)
+                        const listItems = document.querySelectorAll('.song-item');
+                        listItems.forEach(item => {
+                            const idx = item.dataset.index;
+                            if (songs[idx] === song) {
+                                const img = item.querySelector('.song-thumbnail img');
+                                if (img) img.src = coverUrl;
+                            }
+                        });
                     }
                 })
                 .catch(err => console.warn(`Nie udało się pobrać okładki dla: ${song.title}`, err));
