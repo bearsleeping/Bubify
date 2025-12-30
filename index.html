@@ -578,7 +578,12 @@ body.add-to-playlist-open .add-to-playlist-content {
     width: 90%; max-width: 450px;
     display: flex; flex-direction: column; gap: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-height: 85vh;
+    overflow-y: auto;
 }
+.modal-content::-webkit-scrollbar { width:5px; }
+.modal-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius:10px; }
+.modal-content::-webkit-scrollbar-thumb { background:var(--text-secondary); border-radius:10px; }
 .modal-content h3 { font-size: 22px; font-weight: 700; margin-bottom: 0; }
 .modal-body { display: flex; gap: 20px; align-items: center; }
 .modal-cover-wrapper {
