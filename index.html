@@ -2328,10 +2328,20 @@ document.addEventListener('DOMContentLoaded', function() {
         songListEl.innerHTML = '';
         const favoriteUrls = new Set(playlists['Ulubione']);
         const isCustomPlaylist = activePlaylistName !== 'Wszystkie utwory';
+        const searchTerm = searchInput.value.toLowerCase();
 
         songs.forEach((song, index) => {
             const li = document.createElement('li');
             li.classList.add('song-item');
+            
+            if (searchTerm) {
+                const title = song.title.toLowerCase();
+                const artist = song.artist.toLowerCase();
+                if (!title.includes(searchTerm) && !artist.includes(searchTerm)) {
+                    li.style.display = 'none';
+                }
+            }
+
             li.setAttribute('draggable', 'true');
             li.dataset.index = index;
             const isFavorite = favoriteUrls.has(song.audio);
