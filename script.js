@@ -344,6 +344,80 @@ document.addEventListener('DOMContentLoaded', function() {
         return `${currentUser}_${key}`;
     }
 
+    async function checkLogin(explicitSession = null) {
+        let sessionFound = false;
+        let session = explicitSession;
+
+        if (supabase && !session) {
+            const { data } = await supabase.auth.getSession();
+            session = data.session;
+        }
+
+        if (session && session.user) {
+            sessionFound = true;
+            
+            // 1. Pobierz aktualną bazę użytkowników, aby sprawdzić powiązania
+            await syncDown(null);
+            let users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+            
+            let username = null;
+            const email = session.user.email;
+            
+            // 2. Spróbuj znaleźć użytkownika po emailu (dla Discorda i logowania mailem)
+            if (email) {
+                const foundKey = Object.keys(users).find(k => users[k].email && users[k].email.toLowerCase() === email.toLowerCase());
+                if (foundKey) username = foundKey;
+            }
+
+            // 3. Jeśli nie znaleziono (np. pierwszy raz przez Discord), utwórz konto
+            if (!username) {
+                // Pobierz nazwę z metadanych Discorda lub emaila
+                let candidateName = session.user.user_metadata.full_name || 
+                                  session.user.user_metadata.name || 
+                                  (email ? email.split('@')[0] : 'Użytkownik');
+                
+                candidateName = candidateName.trim();
+
+                // Sprawdź unikalność nazwy, jeśli zajęta - dodaj losowy numer
+                if (users[candidateName]) {
+                    candidateName = `${candidateName}_${Math.floor(Math.random() * 1000)}`;
+                }
+                
+                username = candidateName;
+                
+                // Utwórz nowy profil
+                users[username] = {
+                    email: email,
+                    joinDate: new Date().toLocaleDateString(),
+                    plays: 0,
+                    bio: '',
+                    avatar: session.user.user_metadata.avatar_url || null // Pobierz awatar z Discorda
+                };
+                
+                localStorage.setItem('bubify_users', JSON.stringify(users));
+                await syncUp(); // Zapisz w bazie globalnej
+                showToast(`Utworzono nowe konto: ${username}`);
+            } else {
+                // Aktualizuj awatar jeśli logowanie przez Discord i brak awatara lokalnie
+                if (session.user.app_metadata.provider === 'discord' && session.user.user_metadata.avatar_url) {
+                    if (users[username].avatar !== session.user.user_metadata.avatar_url) {
+                        users[username].avatar = session.user.user_metadata.avatar_url;
+                        localStorage.setItem('bubify_users', JSON.stringify(users));
+                        await syncUp();
+                    }
+                }
+            }
+
+            await loginUser(username);
+        }
+
+        if (!sessionFound) {
+            authView.classList.remove('hidden');
+            localStorage.removeItem('bubify_current_user');
+        }
+    }
+
+    /* STARA WERSJA checkLogin (usunięta przez diff powyżej)
     async function checkLogin() {
         let sessionFound = false;
         if (supabase) {
@@ -412,6 +486,7 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.removeItem('bubify_current_user');
         }
     }
+    */
 
     async function loginUser(username) {
         currentUser = username;
@@ -3557,6 +3632,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Sprawdź status logowania na starcie
-    checkLogin();
+    if (supabase) {
+        supabase.auth.onAuthStateChange((event, session) => {
+            // Ignoruj INITIAL_SESSION jeśli mamy token w URL (czekamy na SIGNED_IN po przetworzeniu hasha)
+            if (event === 'INITIAL_SESSION' && !session && window.location.hash && window.location.hash.includes('access_token')) {
+                return;
+            }
+
+            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                checkLogin(session);
+                // Wyczyść URL po pomyślnym logowaniu OAuth
+                if (session && window.location.hash && window.location.hash.includes('access_token')) {
+                    window.history.replaceState(null, null, window.location.pathname);
+                }
+            } else if (event === 'SIGNED_OUT') {
+                checkLogin(null);
+            }
+        });
+    } else {
+        checkLogin();
+    }
 
 });
