@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setViewportHeight();
     // Uruchom funkcję przy zmianie rozmiaru okna (np. obrót ekranu)
     window.addEventListener('resize', setViewportHeight);
+    // Dodatkowa obsługa dla nowego Safari (pasek adresu na dole)
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', setViewportHeight);
+    }
 
     // --- Wykrywanie iOS i ukrywanie suwaka głośności ---
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -285,7 +289,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let isPlaying = false;
     let currentSongIndex = 0;
-    const audio = new Audio();
+    const audio = document.createElement('audio'); // Zmiana na element DOM
+    audio.preload = 'auto'; // Wymuś buforowanie
+    document.body.appendChild(audio); // Dodanie do DOM zapobiega usypianiu w tle
     let currentRotation = 0;
     let animationFrameId = null;
     let repeatMode = 0; // 0: none, 1: all, 2: one
@@ -294,6 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let tempAvatarDataUrl = null;
     let adminChartInstance = null;
     let adminArtistChartInstance = null;
+    let lastSavedTime = 0; // Zmienna do optymalizacji zapisu stanu
 
     // --- Toast Notification System ---
     function showToast(message) {
@@ -419,12 +426,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
+            // Jeśli użytkownik jest już zalogowany w tej sesji, nie przeładowuj
+            if (currentUser === username) return;
+
             await loginUser(username);
 
             // Dla nowych użytkowników wymuś natychmiastową synchronizację, aby utworzyć rekord w bazie
             // if (isNewUser) {
             //     await syncUp();
             // }
+        }
+
+        // Jeśli nie znaleziono sesji Supabase, sprawdź czy użytkownik był wcześniej zalogowany lokalnie
+        if (!sessionFound) {
+            const storedUser = localStorage.getItem('bubify_current_user');
+            if (storedUser) {
+                const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
+                if (users[storedUser]) {
+                    sessionFound = true;
+                    authView.classList.add('hidden');
+                    await loginUser(storedUser);
+                }
+            }
         }
 
         if (!sessionFound) {
@@ -450,6 +473,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Sprawdź czy to pierwsze logowanie na tym urządzeniu (brak danych lokalnych)
         const hasLocalData = localStorage.getItem(getStorageKey('bubify_playlists'));
+        const lastSyncTime = localStorage.getItem(getStorageKey('bubify_last_sync_time'));
+        const now = Date.now();
+        const shouldSync = !lastSyncTime || (now - parseInt(lastSyncTime) > 5 * 60 * 1000); // Synchronizacja co 5 minut
+
         let syncPromise = Promise.resolve(false);
 
         if (supabase) {
@@ -457,9 +484,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Brak danych lokalnych - wymuś oczekiwanie na pobranie
                 showToast('Pobieranie profilu...');
                 await syncDown(username);
+                localStorage.setItem(getStorageKey('bubify_last_sync_time'), now);
+            } else if (shouldSync) {
+                // Są dane lokalne, ale minął czas - pobierz w tle
+                syncPromise = syncDown(username).then(result => {
+                    if (result) localStorage.setItem(getStorageKey('bubify_last_sync_time'), Date.now());
+                    return result;
+                });
             } else {
-                // Są dane lokalne - pobierz w tle
-                syncPromise = syncDown(username);
+                console.log('Pominięto synchronizację profilu (dane są aktualne).');
             }
         }
 
@@ -1460,8 +1493,58 @@ document.addEventListener('DOMContentLoaded', function() {
         closeAddToPlaylistView();
     }
 
+    // Funkcja pomocnicza do konfiguracji UI po załadowaniu utworów (z cache lub API)
+    function setupSongsAfterFetch() {
+        // Wypełnij playlistę "Wszystkie utwory"
+        playlists['Wszystkie utwory'] = allSongs.filter(s => s.duration !== 'LIVE').map(s => s.audio);
+
+        // Upewnij się, że playlista Radio zawiera stacje (w przypadku ładowania z cache)
+        if (!playlists['Radio']) playlists['Radio'] = [];
+        allSongs.filter(s => s.duration === 'LIVE').forEach(station => {
+            if (!playlists['Radio'].includes(station.audio)) playlists['Radio'].push(station.audio);
+        });
+
+        // Ustaw aktywną playlistę (ostatnio używaną lub domyślną)
+        const lastActivePlaylist = localStorage.getItem(getStorageKey('bubify_lastActivePlaylist')) || 'Wszystkie utwory';
+        setActivePlaylist(playlists[lastActivePlaylist] ? lastActivePlaylist : 'Wszystkie utwory');
+
+        // Przywróć ostatnio odtwarzany utwór i czas
+        const lastSongUrl = localStorage.getItem(getStorageKey('bubify_lastSong'));
+        const lastTime = localStorage.getItem(getStorageKey('bubify_lastTime'));
+        
+        if (lastSongUrl) {
+            const index = songs.findIndex(s => s.audio === lastSongUrl);
+            if (index !== -1) {
+                currentSongIndex = index;
+                // Tylko jeśli utwór nie jest jeszcze załadowany (unikamy resetu przy aktualizacji danych)
+                if (audio.src !== lastSongUrl) {
+                    loadSong(currentSongIndex);
+                    if (lastTime) {
+                        audio.currentTime = parseFloat(lastTime);
+                    }
+                }
+                // Jeśli utwór jest już załadowany, loadSong zaktualizuje tylko UI (dzięki zmianom w loadSong)
+                else {
+                    loadSong(currentSongIndex);
+                }
+            }
+        }
+    }
+
     // Funkcja pobierająca utwory (wydzielona, aby wywołać po zalogowaniu)
     function fetchSongs() {
+        // 1. Próba załadowania z pamięci podręcznej (dla natychmiastowego startu po odświeżeniu)
+        const cachedSongs = localStorage.getItem('bubify_cached_songs');
+        if (cachedSongs && allSongs.length === 0) {
+            try {
+                allSongs = JSON.parse(cachedSongs);
+                setupSongsAfterFetch();
+                console.log('Załadowano utwory z pamięci podręcznej.');
+            } catch (e) {
+                console.error('Błąd odczytu cache utworów:', e);
+            }
+        }
+
         // Pokaż loader jeśli lista jest pusta
         if (allSongs.length === 0) {
             songListEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-secondary);">Ładowanie biblioteki...</div>';
@@ -1478,7 +1561,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(files => {
           if (!Array.isArray(files)) throw new Error('Nieprawidłowy format danych.');
 
-          allSongs = files
+          const fetchedSongs = files
               .filter(f => f.name.endsWith('.mp3'))
               .map(f => {
                   const name = f.name.replace(/\.mp3$/, '');
@@ -1555,39 +1638,24 @@ document.addEventListener('DOMContentLoaded', function() {
               }
           ];
 
-          radioStations.forEach(station => {
-              allSongs.push(station);
-              if (!playlists['Radio'].includes(station.audio)) playlists['Radio'].push(station.audio);
-          });
-
-          // Wypełnij playlistę "Wszystkie utwory"
-          playlists['Wszystkie utwory'] = allSongs.filter(s => s.duration !== 'LIVE').map(s => s.audio);
-
-          // Ustaw aktywną playlistę (ostatnio używaną lub domyślną)
-          const lastActivePlaylist = localStorage.getItem(getStorageKey('bubify_lastActivePlaylist')) || 'Wszystkie utwory';
-          setActivePlaylist(playlists[lastActivePlaylist] ? lastActivePlaylist : 'Wszystkie utwory');
-
-          // Przywróć ostatnio odtwarzany utwór i czas
-          const lastSongUrl = localStorage.getItem(getStorageKey('bubify_lastSong'));
-          const lastTime = localStorage.getItem(getStorageKey('bubify_lastTime'));
+          // Połącz pobrane utwory ze stacjami radiowymi
+          allSongs = [...fetchedSongs, ...radioStations];
           
-          if (lastSongUrl) {
-              const index = songs.findIndex(s => s.audio === lastSongUrl);
-              if (index !== -1) {
-                  currentSongIndex = index;
-                  loadSong(currentSongIndex);
-                  if (lastTime) {
-                      audio.currentTime = parseFloat(lastTime);
-                  }
-              }
-          }
+          // Zapisz do cache na przyszłość
+          localStorage.setItem('bubify_cached_songs', JSON.stringify(allSongs));
+
+          // Skonfiguruj UI (odśwież listę, jeśli coś się zmieniło)
+          setupSongsAfterFetch();
 
           fetchAlbumCovers(); // Pobierz okładki w tle
       })
       .catch(err => {
           console.error("Błąd podczas pobierania listy utworów:", err);
-          showToast(err.message || "Błąd pobierania utworów");
-          songListEl.innerHTML = `<div style="padding:20px; text-align:center; color:#ff453a;">${err.message}<br>Spróbuj odświeżyć stronę.</div>`;
+          // Jeśli mamy dane z cache, nie pokazuj błędu użytkownikowi, tylko w konsoli
+          if (allSongs.length === 0) {
+              showToast(err.message || "Błąd pobierania utworów");
+              songListEl.innerHTML = `<div style="padding:20px; text-align:center; color:#ff453a;">${err.message}<br>Spróbuj odświeżyć stronę.</div>`;
+          }
       });
     }
     
@@ -1779,7 +1847,15 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelector('.album-cover img').src = song.cover;
         durationEl.textContent = song.duration;
 
-        audio.src = song.audio;
+        // Zapobiegaj resetowaniu odtwarzania, jeśli utwór jest już załadowany
+        if (audio.src !== song.audio) {
+            audio.src = song.audio;
+            // Zresetuj obrót tylko przy zmianie utworu
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+            currentRotation = 0;
+            albumCover.style.transform = 'rotate(0deg)';
+        }
 
         // Sprawdzenie artysty i dodanie/usunięcie klasy dla cienia
         albumCover.classList.remove('type-o-negative-glow', 'rammstein-glow');
@@ -1802,10 +1878,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Zresetuj i potencjalnie rozpocznij animację obrotu dla nowego utworu
-        cancelAnimationFrame(animationFrameId);
-        currentRotation = 0;
-        albumCover.style.transform = 'rotate(0deg)';
-        if (isPlaying) {
+        if (isPlaying && !animationFrameId) {
             animationFrameId = requestAnimationFrame(rotateCover);
         }
 
@@ -2133,6 +2206,12 @@ document.addEventListener('DOMContentLoaded', function() {
         progress.style.width = `${progressPercent}%`;
 
         currentTimeEl.textContent = formatTime(audio.currentTime);
+
+        // Zapisuj stan co 5 sekund, aby zapobiec utracie postępu przy uśpieniu/odświeżeniu karty przez przeglądarkę
+        if (isPlaying && Math.abs(audio.currentTime - lastSavedTime) > 5) {
+            savePlaybackState();
+            lastSavedTime = audio.currentTime;
+        }
     });
 
     audio.addEventListener('loadedmetadata', () => {
