@@ -349,6 +349,26 @@ document.addEventListener('DOMContentLoaded', function() {
         let sessionFound = false;
         let session = explicitSession;
 
+        // --- OPTYMALIZACJA: Szybki start (Desktop/Mobile) ---
+        // Sprawdź localStorage przed odpytaniem serwera.
+        // Jeśli mamy zapisanego użytkownika, ładujemy go natychmiast.
+        const storedUser = localStorage.getItem('bubify_current_user');
+        if (storedUser && !explicitSession) {
+            console.log('Szybki start z pamięci lokalnej dla:', storedUser);
+            authView.classList.add('hidden'); // Ukryj logowanie natychmiast
+            
+            // Załaduj interfejs użytkownika od razu
+            await loginUser(storedUser);
+
+            // Weryfikacja sesji w tle (nie blokuje interfejsu)
+            if (supabase) {
+                supabase.auth.getSession().then(({ data }) => {
+                    if (data.session) console.log('Sesja zweryfikowana w tle.');
+                });
+            }
+            return; // Kończymy funkcję, nie czekamy na resztę
+        }
+
         if (supabase && !session) {
             const { data } = await supabase.auth.getSession();
             session = data.session;
@@ -435,19 +455,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // if (isNewUser) {
             //     await syncUp();
             // }
-        }
-
-        // Jeśli nie znaleziono sesji Supabase, sprawdź czy użytkownik był wcześniej zalogowany lokalnie
-        if (!sessionFound) {
-            const storedUser = localStorage.getItem('bubify_current_user');
-            if (storedUser) {
-                const users = JSON.parse(localStorage.getItem('bubify_users') || '{}');
-                if (users[storedUser]) {
-                    sessionFound = true;
-                    authView.classList.add('hidden');
-                    await loginUser(storedUser);
-                }
-            }
         }
 
         if (!sessionFound) {
