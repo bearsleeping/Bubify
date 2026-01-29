@@ -354,12 +354,15 @@ body.is-ios .volume-container {
     background-color: var(--bg-color);
     z-index: 110; /* Above lyrics view */
     transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0s linear 0.4s;
+    visibility: hidden;
     display: flex;
     flex-direction: column;
 }
 body.playlist-manager-open .playlist-manager-view {
     transform: translateY(0);
+    visibility: visible;
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0s linear 0s;
 }
 .playlist-manager-header {
     padding: 15px 20px;
@@ -984,6 +987,7 @@ body.add-to-playlist-open .add-to-playlist-content {
         grid-area: sidebar;
         position: relative;
         transform: none;
+        visibility: visible;
         background-color: rgba(30, 30, 30, 0.6); /* Półprzezroczyste tło */
         backdrop-filter: blur(20px) saturate(180%); /* Efekt szkła (macOS) */
         -webkit-backdrop-filter: blur(20px) saturate(180%);
